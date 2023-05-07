@@ -2,12 +2,19 @@
 
 ## File header
 
-| offset | len | alias          | field                                                                                                                          |
-|--------|-----|----------------|--------------------------------------------------------------------------------------------------------------------------------|
-| 0      | 32  | file_id        | the header string "SQLite-like db\0"                                                                                           |
-| 32     | 2   | ver            | the database version                                                                                                           |
-| 36     | 1   | page_size      | an unsigned byte. set the size of database page size. must be between 10 and 20 note the value as V, then the page size is 2^V |
-| 37     | 4   | freelist_head  | the page number of the first freelist page                                                                                     |
-| 41     | 4   | freelist_count | total number of freelist pages                                                                                                 |
-|        |     | else           | not used                                                                                                                       |
 
+## BTreeRootPage
+
+| len    | name           | value                                               |
+|--------|----------------|-----------------------------------------------------|
+| 1      | page type      | = 0                                                 |
+| 4      | payload_size   | set based on an algorithm                           |
+| 4      | column_count   |                                                     |
+| 4      | free_cell_head | offset to the first free cell                       |
+| 4      | tail_ptr       | rightmost child pointer of BTree node               |
+| 4      | cell_count     | active cell count                                   |
+| var(4) | column_types   |                                                     |
+| var(1) | is_key         | boolean, true if this column belongs to primary key |
+| var(4) | cell_ptrs      | offset to cells                                     |
+| var    | \<free_space>  | free space                                          |
+| var    | \<cells>       | cells                                               |
