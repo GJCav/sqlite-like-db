@@ -24,7 +24,7 @@ public class CreateReleasePage {
         // write to null page
         try (DBFile db = new DBFile("test.db");) {
 
-            db.set_cache(new SimpleCache(db, 3));
+            db.set_cache(new LRUCache(db, 3));
 
             for (int i = 0;i < 10;i++) {
                 int page_id = db.alloc_page();
@@ -44,7 +44,7 @@ public class CreateReleasePage {
 
         // read from null page and release them
         try (DBFile db = new DBFile("test.db");) {
-            db.set_cache(new SimpleCache(db, 3));
+            db.set_cache(new LRUCache(db, 3));
             DumpDB d = new DumpDB(db);
 
             System.out.println("Null Page data: ");
@@ -88,7 +88,7 @@ public class CreateReleasePage {
         }
 
         try (DBFile db = new DBFile("test.db")) {
-            db.set_cache(new SimpleCache(db, 1));
+            db.set_cache(new LRUCache(db, 1));
 
             DumpDB d = new DumpDB(db);
             d.print_all_pages();

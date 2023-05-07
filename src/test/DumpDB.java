@@ -8,7 +8,7 @@ public class DumpDB {
     public static void main(String[] argv) {
         try {
             DBFile db = new DBFile("test.db");
-            db.set_cache(new SimpleCache(db, 3));
+            db.set_cache(new LRUCache(db, 3));
             DumpDB d = new DumpDB(db);
             d.print_db_header();
         } catch (Exception e) {
@@ -83,6 +83,57 @@ public class DumpDB {
         System.out.println(s);
     }
 
+    private void print_page(int page_id) {
+        println("Page " + page_id + ": ");
+        level++;
+        StringBuilder sbuf = new StringBuilder();
+        sbuf.append("- type: ");
+
+        Page page = new Page(page_id, db);
+        int type = -1;
+        try {
+            type = page.get_headers().get("type").to_byte();
+        } catch (IOException e) {
+            sbuf.append("ERROR, " + e.getMessage());
+        }
+
+
+        if (type == Page.TYPE_NULL) {
+            sbuf.append(type).append(" , null page");
+            println(sbuf.toString());
+
+            sbuf = new StringBuilder();
+            sbuf.append("- first 32 bytes: ");
+            try {
+                int pos = page.get_headers().get_total_length();
+                byte[] buf = db.read(page_id, pos, 32);
+                sbuf.append(Bytes.to_string(buf));
+            } catch (IOException e) {
+                sbuf.append("ERROR, " + e.getMessage());
+            }
+            println(sbuf.toString());
+        } else if (type == Page.TYPE_FREE) {
+            sbuf.append(type).append(" , free page");
+            println(sbuf.toString());
+
+            sbuf = new StringBuilder();
+            sbuf.append("- first 32 bytes: ");
+            page = new FreePage(page_id, db);
+            try {
+                int pos = page.get_headers().get_total_length();
+                byte[] buf = db.read(page_id, pos, 32);
+                sbuf.append(Bytes.to_string(buf));
+            } catch (IOException e) {
+                sbuf.append("ERROR, " + e.getMessage());
+            }
+            println(sbuf.toString());
+        } else {
+            sbuf.append(type).append(" , unknown");
+            println(sbuf.toString());
+        }
+        level--;
+    }
+
     public void print_all_pages() {
         int page_count = -1;
         try {
@@ -104,54 +155,7 @@ public class DumpDB {
         print_db_header();
         level--;
         for (int i = 1;i < page_count;i++) {
-            println("- Page " + i + ": ");
-            level++;
-            StringBuilder sbuf = new StringBuilder();
-            sbuf.append("- type: ");
-
-            Page page = new Page(i, db);
-            int type = -1;
-            try {
-                type = page.get_headers().get("type").to_byte();
-            } catch (IOException e) {
-                sbuf.append("ERROR, " + e.getMessage());
-            }
-
-
-            if (type == Page.TYPE_NULL) {
-                sbuf.append(type).append(" , null page");
-                println(sbuf.toString());
-
-                sbuf = new StringBuilder();
-                sbuf.append("- first 32 bytes: ");
-                try {
-                    int pos = page.get_headers().get_total_length();
-                    byte[] buf = db.read(i, pos, 32);
-                    sbuf.append(Bytes.to_string(buf));
-                } catch (IOException e) {
-                    sbuf.append("ERROR, " + e.getMessage());
-                }
-                println(sbuf.toString());
-            } else if (type == Page.TYPE_FREE) {
-                sbuf.append(type).append(" , free page");
-                println(sbuf.toString());
-
-                sbuf = new StringBuilder();
-                sbuf.append("- first 32 bytes: ");
-                page = new FreePage(i, db);
-                try {
-                    int pos = page.get_headers().get_total_length();
-                    byte[] buf = db.read(i, pos, 32);
-                    sbuf.append(Bytes.to_string(buf));
-                } catch (IOException e) {
-                    sbuf.append("ERROR, " + e.getMessage());
-                }
-                println(sbuf.toString());
-            } else {
-                sbuf.append(type).append(" , unknown");
-                println(sbuf.toString());
-            }
-            level--;
+            print_page(i);
         }
     }
 }

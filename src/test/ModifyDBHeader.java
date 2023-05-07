@@ -6,7 +6,7 @@ public class ModifyDBHeader {
     public static void main(String[] argv) {
         try {
             DBFile db = new DBFile("test.db");
-            db.set_cache(new SimpleCache(db, 3));
+            db.set_cache(new LRUCache(db, 3));
 
             Headers headers = db.get_headers();
             headers.set("file_id", "ILOVEPKU");

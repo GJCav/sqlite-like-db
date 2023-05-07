@@ -4,14 +4,14 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-public class SimpleCache implements Cache {
+public class LRUCache implements Cache {
     private DBFile db;
     private int max_cache_size = 100;
     private Map<Integer, Block> blocks = new HashMap<>();
     private BlockChain used_blocks = new BlockChain();
     private BlockChain free_blocks = new BlockChain();
 
-    public SimpleCache(DBFile db, int max_cache_size) {
+    public LRUCache(DBFile db, int max_cache_size) {
         if (db == null) throw new IllegalArgumentException("db must not be null");
         if (max_cache_size <= 0)
             throw new IllegalArgumentException("max_cache_size must be positive");
