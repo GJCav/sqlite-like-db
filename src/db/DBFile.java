@@ -115,10 +115,10 @@ public class DBFile implements Closeable {
     // helpful functions
     ////////////////////////////
 
-    public long get_page_offset(int page_id) {
+    public long get_page_offset(int page_id)  throws IOException {
         if (page_id < 0) throw new IllegalArgumentException("page_id must be positive");
         if(page_id == 0) return 0;
-        return HEADER_SIZE + (page_id - 1L) * 4096;
+        return HEADER_SIZE + (page_id - 1L) * get_page_size(page_id);
     }
 
     public int get_page_size(int page_id) throws IOException {

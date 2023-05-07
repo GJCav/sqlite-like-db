@@ -127,6 +127,21 @@ public class DumpDB {
                 sbuf.append("ERROR, " + e.getMessage());
             }
             println(sbuf.toString());
+        } else if (type == Page.TYPE_OVERFLOW) {
+            sbuf.append(type).append(" , overflow page");
+            println(sbuf.toString());
+
+            sbuf = new StringBuilder();
+            sbuf.append("- first 32 bytes: ");
+            page = new OverflowPage(page_id, db);
+            try {
+                int pos = page.get_headers().get_total_length();
+                byte[] buf = db.read(page_id, pos, 32);
+                sbuf.append(Bytes.to_string(buf));
+            } catch (IOException e) {
+                sbuf.append("ERROR, " + e.getMessage());
+            }
+            println(sbuf.toString());
         } else {
             sbuf.append(type).append(" , unknown");
             println(sbuf.toString());
@@ -156,6 +171,23 @@ public class DumpDB {
         level--;
         for (int i = 1;i < page_count;i++) {
             print_page(i);
+        }
+    }
+
+    public void print_overflow_chain(int page_id) {
+        println("Overflow Chain of Page " + page_id + ": ");
+        while (page_id != 0) {
+            OverflowPage page = new OverflowPage(page_id, db);
+            println("- Page " + page_id + ": ");
+            level++;
+            print_page(page_id);
+            level--;
+            try {
+                page_id = page.get_next();
+            } catch (IOException e) {
+                println("- ERROR on getting next page id, " + e.getMessage());
+                page_id = 0;
+            }
         }
     }
 }

@@ -7,6 +7,7 @@ import java.util.List;
 public class Page {
     public static final byte TYPE_NULL = 0;
     public static final byte TYPE_FREE = 1;
+    public static final byte TYPE_OVERFLOW = 2;
     public static final List<FieldDef> HEADER_DEFS = Arrays.asList(
             new FieldDef(1, "type", TYPE_NULL)
     );
@@ -25,5 +26,41 @@ public class Page {
         return headers.get_total_length();
     }
 
+    public int get_page_id() { return page_id; }
+
     public Headers get_headers() { return headers; }
+
+    public DBFile get_owner() { return owner; }
+
+    /**
+     * ATTENTION: this will read page headers.
+     * @param pos
+     * @param length
+     * @return
+     * @throws IOException
+     */
+    public byte[] read(int pos, int length) throws IOException {
+        return owner.read(page_id, pos, length);
+    }
+
+
+    public void write(int pos, byte[] data) throws IOException {
+        owner.write(page_id, pos, data);
+    }
+
+    /**
+     * ATTENTION: this can write on page headers.
+     * @param pos
+     * @param data
+     * @param offset
+     * @param length
+     * @throws IOException
+     */
+    public void write(int pos, byte[] data, int offset, int length) throws IOException {
+        owner.write(page_id, pos, data, offset, length);
+    }
+
+    public void init_page() throws IOException {
+        headers.set_to_default();
+    }
 }

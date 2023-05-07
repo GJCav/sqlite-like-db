@@ -94,6 +94,8 @@ public class LRUCache implements Cache {
     @Override
     public void write(int page_id, int pos, byte[] data, int offset, int length) throws IOException {
         Block block = get_block(page_id);
+        if (block.data.length < pos + length)
+            throw new IllegalArgumentException("write out of block bound");
         System.arraycopy(data, offset, block.data, pos, length);
         block.updated = true;
     }
