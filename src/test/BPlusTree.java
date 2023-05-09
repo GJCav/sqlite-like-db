@@ -184,9 +184,6 @@ public class BPlusTree<K extends Comparable<K>, V> {
             return r;
         }
 
-        public DeleteResult adjust() {
-            // TODO: balance or merge
-        }
 
         public void balance() {
             // TODO
