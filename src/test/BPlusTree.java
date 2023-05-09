@@ -4,7 +4,7 @@ import java.io.*;
 import java.util.*;
 
 public class BPlusTree<K extends Comparable<K>, V> {
-    public static int MIN_DEG = 3;
+    public static int MIN_DEG = 2;
     public static int MAX_DEG = 3;
     public static final int INTERIOR = 1;
     public static final int LEAF = 2;
@@ -31,11 +31,15 @@ public class BPlusTree<K extends Comparable<K>, V> {
         public Node<K, V> root;
     }
 
+    public static final class DeleteResult<K extends Comparable<K>, V> {
+        public Node<K, V> root;
+    }
+
     public static abstract class Node<K extends Comparable<K>, V> {
 
         public Node<K, V> father;
 
-//        public int idx_in_father = 0; // 维护这个会导致过多的磁盘IO，所以不维护了
+        public int heir_idx = 0;
 
         public List<K> keys = new ArrayList<>();
         int total = 0;
@@ -100,6 +104,8 @@ public class BPlusTree<K extends Comparable<K>, V> {
             interior.children.add(left);
             interior.children.add(right);
             left.father = interior;
+            left.heir_idx = 0;
+            right.heir_idx = 1;
             right.father = interior;
             interior.total = interior.children.stream().mapToInt(c -> c.total).sum();
             return interior;
@@ -125,7 +131,11 @@ public class BPlusTree<K extends Comparable<K>, V> {
                 idx = -(idx+1);
                 keys.add(idx, key);
                 children.add(idx, pseudo.left);
+                pseudo.left.heir_idx = idx;
                 children.set(idx+1, pseudo.right);
+                for(int i = idx+1; i < children.size(); i++) {
+                    children.get(i).heir_idx = i;
+                }
                 pseudo.left.father = this;
                 pseudo.right.father = this;
                 this.total = this.children.stream().mapToInt(c -> c.total).sum();
@@ -254,12 +264,7 @@ public class BPlusTree<K extends Comparable<K>, V> {
             this.duplicate.subList(mid+1, duplicate.size()).clear();
             this.total = this.duplicate.stream().mapToInt(i -> i).sum();
 
-
-//            right.right = this.right;
-//            if(right.right != null) right.right.left = right;
-//            this.right = right;
-//            right.left = left;
-
+            // connect linked list
             Leaf<K, V> a = this;
             Leaf<K, V> b = right;
             Leaf<K, V> c = this.right;
@@ -286,6 +291,38 @@ public class BPlusTree<K extends Comparable<K>, V> {
 
         @Override
         public Node<K, V> merge() {
+            return null;
+        }
+
+        public DeleteResult<K, V> delete(SearchResult<K, V> r) {
+            int idx = r.idx;
+            if(idx < 0) throw new RuntimeException("del key not found");
+
+            duplicate.set(idx, duplicate.get(idx) - 1);
+
+            if(duplicate.get(idx) == 0) {
+                keys.remove(idx);
+                values.remove(idx);
+                duplicate.remove(idx);
+            }
+
+            Node<K, V> h = this;
+            while(h != null) {
+                total--;
+                h = h.father;
+            }
+            total--;
+
+            DeleteResult<K, V> dr = new DeleteResult<>();
+            dr.root = null;
+
+            if(father == null || keys.size() >= MIN_DEG) {
+                // no need to merge
+                return dr;
+            }
+
+            /////////////asdlfjlaksjdflkj
+
             return null;
         }
     }
@@ -462,23 +499,35 @@ public class BPlusTree<K extends Comparable<K>, V> {
         System.out.println();
     }
 
+    public void check_heir_idx(Node<K, V> h) {
+        if(h == null) throw new RuntimeException("FUCK");
+        if(h.get_type() == LEAF) return;
+        Interior<K, V> interior = (Interior<K, V>) h;
+        for(int i = 0;i < interior.children.size();i++){
+            Node<K, V> c = interior.children.get(i);
+            if(c.heir_idx != i){
+                throw new RuntimeException("BAD heir idx");
+            }
+        }
+    }
+
 
     public static void main(String[] argv) throws IOException {
         long start = System.currentTimeMillis();
 
         BPlusTree<Integer, Integer> tree = new BPlusTree<>();
-
+//
 //        for(int i = 10;i > 0;i--){
 //            tree.insert(i, i);
 //            System.out.println("Add " + i + ", cnt = " + tree.root.total);
-//            tree.print_all_keys();
+//            tree.check_heir_idx(tree.root);
 //        }
 
 //        Scanner in = new Scanner(System.in);
 
         Scanner in = new Scanner(new FileInputStream("D:\\Download\\P3369_8.in"));
-        System.setOut(new PrintStream(new FileOutputStream("D:\\Download\\new.txt")));
-
+////        System.setOut(new PrintStream(new FileOutputStream("D:\\Download\\new.txt")));
+//
         int n = in.nextInt();
         for(int i = 0;i < n;i++) {
             int opt = in.nextInt();
@@ -503,6 +552,8 @@ public class BPlusTree<K extends Comparable<K>, V> {
             } else {
                 throw new RuntimeException("error opt");
             }
+
+            tree.check_heir_idx(tree.root);
         }
 
         long end = System.currentTimeMillis();
