@@ -4,7 +4,6 @@ import java.io.*;
 import java.util.*;
 
 public class BPlusTree<K extends Comparable<K>, V> {
-    public static int MIN_DEG = 2;
     public static int MAX_DEG = 3;
     public static final int INTERIOR = 1;
     public static final int LEAF = 2;
@@ -51,8 +50,6 @@ public class BPlusTree<K extends Comparable<K>, V> {
 
         public int get_type() { throw new RuntimeException(); }
 
-        public int get_total() { return total; }
-
         public SearchResult<K, V> find(K key) {
             SearchResult<K, V> r = new SearchResult<>();
 
@@ -81,7 +78,7 @@ public class BPlusTree<K extends Comparable<K>, V> {
         }
 
         public abstract SplitResult<K, V> split();
-        public abstract Node<K, V> merge();
+
     }
 
     /**
@@ -187,9 +184,16 @@ public class BPlusTree<K extends Comparable<K>, V> {
             return r;
         }
 
-        @Override
-        public Node<K, V> merge() {
-            return null;
+        public DeleteResult adjust() {
+            // TODO: balance or merge
+        }
+
+        public void balance() {
+            // TODO
+        }
+
+        public DeleteResult<K, V> merge() {
+            // TODO
         }
     }
 
@@ -288,11 +292,6 @@ public class BPlusTree<K extends Comparable<K>, V> {
             return r;
         }
 
-        @Override
-        public Node<K, V> merge() {
-            return null;
-        }
-
         public DeleteResult<K, V> delete(SearchResult<K, V> r) {
             int idx = r.idx;
             if(idx < 0) throw new RuntimeException("del key not found");
@@ -315,14 +314,13 @@ public class BPlusTree<K extends Comparable<K>, V> {
             DeleteResult<K, V> dr = new DeleteResult<>();
             dr.root = null;
 
-            if(father == null || keys.size() >= MIN_DEG) {
-                // no need to merge
+            if(father == null || keys.size() >= 1) {
+                // no need to adjust
                 return dr;
             }
 
-            /////////////asdlfjlaksjdflkj
-
-            return null;
+            dr = ((Interior<K, V>)father).adjust();
+            return dr;
         }
     }
 
