@@ -1,13 +1,11 @@
 package test;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.io.*;
+import java.util.*;
 
 public class BPlusTree<K extends Comparable<K>, V> {
     public static int MIN_DEG = 3;
-    public static int MAX_DEG = 5;
+    public static int MAX_DEG = 3;
     public static final int INTERIOR = 1;
     public static final int LEAF = 2;
 
@@ -130,7 +128,7 @@ public class BPlusTree<K extends Comparable<K>, V> {
                 children.set(idx+1, pseudo.right);
                 pseudo.left.father = this;
                 pseudo.right.father = this;
-                this.total += pseudo.left.total + pseudo.right.total;
+                this.total = this.children.stream().mapToInt(c -> c.total).sum();
             }
         }
 
@@ -140,6 +138,17 @@ public class BPlusTree<K extends Comparable<K>, V> {
          */
         @Override
         public SplitResult<K, V> split() {
+            /**
+             * Splitting this node will cause its father to insert a new key,
+             * so check its father first. And this should be done before splitting
+             * current node to guarantee that the father can get the correct
+             * total count during splitting.
+             */
+            Node<K, V> root = null;
+            if(father != null && father.keys.size() + 1 > MAX_DEG) {
+                root = father.split().root;
+            }
+
             Interior<K, V> right = new Interior<>();
 
             int mid = keys.size() / 2;
@@ -155,14 +164,10 @@ public class BPlusTree<K extends Comparable<K>, V> {
 
             PseudoInterior<K, V> pseudo = new PseudoInterior<>(this, key, right);
 
-            Node<K, V> root = null;
-            if (father != null) {
-                if (father.keys.size() + 1 > MAX_DEG) {
-                    root = father.split().root;
-                }
-                ((Interior<K, V>)father).insert(pseudo);
-            } else {
+            if (father == null) {
                 root = pseudo.to_interior();
+            } else {
+                ((Interior<K, V>) father).insert(pseudo);
             }
 
             SplitResult<K, V> r = new SplitResult<>();
@@ -213,37 +218,62 @@ public class BPlusTree<K extends Comparable<K>, V> {
                 duplicate.add(idx, 1);
                 total++;
             }
+
+            if(father != null) {
+                Interior<K, V> h = (Interior<K, V>) father;
+                while(h != null) {
+                    h.total++;
+                    h = (Interior<K, V>) h.father;
+                }
+            }
         }
 
         @Override
         public SplitResult<K, V> split() {
+            /**
+             * Same to Interior.split()
+             */
+            Node<K, V> root = null;
+            if(father != null && father.keys.size() + 1 > MAX_DEG) {
+                root = father.split().root;
+            }
+
             Leaf<K, V> right = new Leaf<>();
 
             int mid = keys.size() / 2;
             K key = keys.get(mid);
 
+            // 叶子节点分裂，需要在右侧保留选定的 key
             right.keys.addAll(keys.subList(mid+1, keys.size()));
             right.values.addAll(values.subList(mid+1, values.size()));
             right.duplicate.addAll(duplicate.subList(mid+1, duplicate.size()));
             right.total = right.duplicate.stream().mapToInt(i -> i).sum();
 
-            this.keys.subList(mid, keys.size()).clear();
-            this.values.subList(mid, values.size()).clear();
-            this.duplicate.subList(mid, duplicate.size()).clear();
+            this.keys.subList(mid+1, keys.size()).clear();
+            this.values.subList(mid+1, values.size()).clear();
+            this.duplicate.subList(mid+1, duplicate.size()).clear();
             this.total = this.duplicate.stream().mapToInt(i -> i).sum();
 
-            this.right = right;
-            right.left = left;
+
+//            right.right = this.right;
+//            if(right.right != null) right.right.left = right;
+//            this.right = right;
+//            right.left = left;
+
+            Leaf<K, V> a = this;
+            Leaf<K, V> b = right;
+            Leaf<K, V> c = this.right;
+            a.right = b;
+            b.right = c;
+            if(c != null) c.left = b;
+            b.left = a;
 
             PseudoInterior<K, V> pseudo = new PseudoInterior<>(this, key, right);
-            Node<K, V> root = null;
-            if (father != null) {
-                if (father.keys.size() + 1 > MAX_DEG){
-                    root = father.split().root;
-                }
-                ((Interior<K, V>)father).insert(pseudo);
-            } else {
+
+            if (father == null) {
                 root = pseudo.to_interior();
+            } else {
+                ((Interior<K, V>) father).insert(pseudo);
             }
 
             SplitResult<K, V> r = new SplitResult<>();
@@ -292,32 +322,42 @@ public class BPlusTree<K extends Comparable<K>, V> {
 
     public V prior(K key) {
         SearchResult<K, V> r = root.find(key);
-        if (!r.found()) {
-            throw new RuntimeException("no key");
-        }
         Leaf<K, V> leaf = (Leaf<K, V>)r.path.get(r.path.size()-1);
         int idx = r.idx;
+        if (idx < 0) idx = -(idx+1);
 
-        while(leaf.duplicate.get(idx) == 0) {
+        do {
             idx--;
             if (idx == -1) {
                 if (leaf.left == null) {
+                    System.out.println("find " + key);
                     throw new RuntimeException("no prior");
                 }
                 leaf = leaf.left;
                 idx = leaf.keys.size() - 1;
             }
-        }
+        } while(leaf.duplicate.get(idx) == 0);
         return leaf.values.get(idx);
     }
 
     public V successor(K key) {
         SearchResult<K, V> r = root.find(key);
-        if (!r.found()) {
-            throw new RuntimeException("no key");
-        }
         Leaf<K, V> leaf = (Leaf<K, V>)r.path.get(r.path.size()-1);
+
         int idx = r.idx;
+        if(!r.found()) {
+            idx = -(idx+1);
+        } else {
+            idx++;
+        }
+
+        if (idx == leaf.keys.size()) {
+            if (leaf.right == null) {
+                throw new RuntimeException("no successor");
+            }
+            leaf = leaf.right;
+            idx = 0;
+        }
 
         while(leaf.duplicate.get(idx) == 0) {
             idx++;
@@ -329,6 +369,7 @@ public class BPlusTree<K extends Comparable<K>, V> {
                 idx = 0;
             }
         }
+
         return leaf.values.get(idx);
     }
 
@@ -371,7 +412,7 @@ public class BPlusTree<K extends Comparable<K>, V> {
             if (idx < 0) {
                 idx = -(idx + 1);
             }
-            for (int j = 0; j < idx-1; j++) {
+            for (int j = 0; j <= idx-1; j++) {
                 rank += interior.children.get(j).total;
             }
         }
@@ -405,12 +446,67 @@ public class BPlusTree<K extends Comparable<K>, V> {
         return leaf.values.get(idx);
     }
 
-
-    public static void main(String[] argv) {
-        BPlusTree<Integer, Integer> tree = new BPlusTree<>();
-        for(int i = 0;i < 100;i++) {
-            tree.insert(i, i);
+    public void print_all_keys() {
+        Node<K, V> h = root;
+        while(h.get_type() != LEAF) {
+            Interior<K, V> interior = (Interior<K, V>)h;
+            h = interior.children.get(0);
         }
+        Leaf<K, V> leaf = (Leaf<K, V>)h;
+        while(leaf != null) {
+            for(int i = 0;i < leaf.keys.size();i++) {
+                System.out.print(leaf.keys.get(i) + "(" + leaf.duplicate.get(i) + ") ");
+            }
+            leaf = leaf.right;
+        }
+        System.out.println();
+    }
+
+
+    public static void main(String[] argv) throws IOException {
+        long start = System.currentTimeMillis();
+
+        BPlusTree<Integer, Integer> tree = new BPlusTree<>();
+
+//        for(int i = 10;i > 0;i--){
+//            tree.insert(i, i);
+//            System.out.println("Add " + i + ", cnt = " + tree.root.total);
+//            tree.print_all_keys();
+//        }
+
+//        Scanner in = new Scanner(System.in);
+
+        Scanner in = new Scanner(new FileInputStream("D:\\Download\\P3369_8.in"));
+        System.setOut(new PrintStream(new FileOutputStream("D:\\Download\\new.txt")));
+
+        int n = in.nextInt();
+        for(int i = 0;i < n;i++) {
+            int opt = in.nextInt();
+            int x = in.nextInt();
+
+            if (opt == 1) {
+                tree.insert(x, x);
+            } else if (opt == 2) {
+                tree.pseudo_delete(x);
+            } else if (opt == 3) {
+                int rank = tree.rank(x);
+                System.out.println(rank);
+            } else if (opt == 4) {
+                int val = tree.val_at(x);
+                System.out.println(val);
+            } else if (opt == 5) {
+                int p = tree.prior(x);
+                System.out.println(p);
+            } else if (opt == 6) {
+                int s = tree.successor(x);
+                System.out.println(s);
+            } else {
+                throw new RuntimeException("error opt");
+            }
+        }
+
+        long end = System.currentTimeMillis();
+        System.err.println("time = " + (end - start) + "ms");
     }
 
 }
