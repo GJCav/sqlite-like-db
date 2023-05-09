@@ -39,7 +39,12 @@ public class BPlusTree<K extends Comparable<K>, V> {
 
         public Node<K, V> father;
 
-        public int heir_idx = 0;
+        /**
+         * 使用顺序遍历，只会在同一个 page 中遍历
+         * 但维护 heir_idx 需要遍历某个 interior node 插入位置之后的所有 children 的 page
+         * 代价更大，所以不维护 heir_idx
+         */
+//        public int heir_idx = 0;
 
         public List<K> keys = new ArrayList<>();
         int total = 0;
@@ -104,8 +109,6 @@ public class BPlusTree<K extends Comparable<K>, V> {
             interior.children.add(left);
             interior.children.add(right);
             left.father = interior;
-            left.heir_idx = 0;
-            right.heir_idx = 1;
             right.father = interior;
             interior.total = interior.children.stream().mapToInt(c -> c.total).sum();
             return interior;
@@ -131,11 +134,7 @@ public class BPlusTree<K extends Comparable<K>, V> {
                 idx = -(idx+1);
                 keys.add(idx, key);
                 children.add(idx, pseudo.left);
-                pseudo.left.heir_idx = idx;
                 children.set(idx+1, pseudo.right);
-                for(int i = idx+1; i < children.size(); i++) {
-                    children.get(i).heir_idx = i;
-                }
                 pseudo.left.father = this;
                 pseudo.right.father = this;
                 this.total = this.children.stream().mapToInt(c -> c.total).sum();
@@ -499,17 +498,6 @@ public class BPlusTree<K extends Comparable<K>, V> {
         System.out.println();
     }
 
-    public void check_heir_idx(Node<K, V> h) {
-        if(h == null) throw new RuntimeException("FUCK");
-        if(h.get_type() == LEAF) return;
-        Interior<K, V> interior = (Interior<K, V>) h;
-        for(int i = 0;i < interior.children.size();i++){
-            Node<K, V> c = interior.children.get(i);
-            if(c.heir_idx != i){
-                throw new RuntimeException("BAD heir idx");
-            }
-        }
-    }
 
 
     public static void main(String[] argv) throws IOException {
@@ -520,7 +508,6 @@ public class BPlusTree<K extends Comparable<K>, V> {
 //        for(int i = 10;i > 0;i--){
 //            tree.insert(i, i);
 //            System.out.println("Add " + i + ", cnt = " + tree.root.total);
-//            tree.check_heir_idx(tree.root);
 //        }
 
 //        Scanner in = new Scanner(System.in);
@@ -553,7 +540,6 @@ public class BPlusTree<K extends Comparable<K>, V> {
                 throw new RuntimeException("error opt");
             }
 
-            tree.check_heir_idx(tree.root);
         }
 
         long end = System.currentTimeMillis();
