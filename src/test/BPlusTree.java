@@ -184,13 +184,117 @@ public class BPlusTree<K extends Comparable<K>, V> {
             return r;
         }
 
+        public DeleteResult<K,V> delete_self() {
+            if (keys.size() > 0) {
+                throw new RuntimeException("can't delete non-empty interior node");
+            }
+            DeleteResult<K, V> dr = new DeleteResult<>();
+            dr.root = null;
 
-        public void balance() {
-            // TODO
+            if (father == null) {
+                dr.root = children.get(0);
+                dr.root.father = null;
+                // TODO: release space of this node
+                return dr;
+            }
+
+            boolean solved_by_borrow = false;
+            Interior<K, V> fth = (Interior<K, V>) father;
+            int heir_idx = fth.children.indexOf(this);
+            if (heir_idx > 0) {
+                // try borrow from left sibling
+                Interior<K, V> left = (Interior<K, V>) fth.children.get(heir_idx-1);
+                if (left.keys.size() >= 2) {
+                    borrow_from_left(heir_idx);
+                    solved_by_borrow = true;
+                }
+            }
+            if (!solved_by_borrow && heir_idx < fth.children.size()-1) {
+                // try borrow from right sibling
+                Interior<K, V> right = (Interior<K, V>) fth.children.get(heir_idx+1);
+                if (right.keys.size() >= 2) {
+                    borrow_from_right(heir_idx);
+                    solved_by_borrow = true;
+                }
+            }
+            if (solved_by_borrow){
+                return dr; // no root change
+            }
+
+            boolean solved_by_merge = false;
+            if (heir_idx > 0) {
+                // try merge with left sibling
+                Interior<K, V> left = (Interior<K, V>) fth.children.get(heir_idx-1);
+                fth.children.set(heir_idx, left);
+                fth.children.remove(heir_idx-1);
+                K key = fth.keys.remove(heir_idx-1);
+
+                left.keys.add(key);
+                Node<K, V> child = this.children.get(0);
+                left.children.add(child);
+                child.father = left;
+                left.total += child.total;
+                solved_by_merge = true;
+            }
+
+            if (!solved_by_merge && heir_idx < fth.children.size() - 1) {
+                // try merge with right sibling
+                Interior<K, V> right = (Interior<K, V>) fth.children.get(heir_idx+1);
+                fth.children.remove(heir_idx);
+                K key = fth.keys.remove(heir_idx);
+
+                right.keys.add(0, key);
+                Node<K, V> child = this.children.get(0);
+                right.children.add(0, child);
+                child.father = right;
+                right.total += child.total;
+                solved_by_merge = true;
+            }
+
+            if (!solved_by_merge) {
+                throw new RuntimeException("absurd structure");
+            }
+
+            // TODO: release space of this node
+
+            if (fth.keys.size() > 0) {
+                return dr;
+            }
+
+            dr = fth.delete_self();
+            return dr;
         }
 
-        public DeleteResult<K, V> merge() {
-            // TODO
+        private void borrow_from_left(int heir_idx) {
+            Interior<K, V> fth = (Interior<K, V>)father;
+            Interior<K, V> left = (Interior<K, V>)fth.children.get(heir_idx-1);
+
+            K key = left.keys.remove(left.keys.size()-1);
+            Node<K, V> child = left.children.remove(left.children.size()-1);
+            left.total -= child.total;
+
+            this.keys.add(fth.keys.get(heir_idx-1));
+            this.children.add(0, child);
+            this.total += child.total;
+            child.father = this;
+
+            fth.keys.set(heir_idx-1, key);
+        }
+
+        private void borrow_from_right(int heir_idx) {
+            Interior<K, V> fth = (Interior<K, V>)father;
+            Interior<K, V> right = (Interior<K, V>)fth.children.get(heir_idx+1);
+
+            K key = right.keys.remove(0);
+            Node<K, V> child = right.children.remove(0);
+            right.total -= child.total;
+
+            this.keys.add(fth.keys.get(heir_idx));
+            this.children.add(child);
+            this.total += child.total;
+            child.father = this;
+
+            fth.keys.set(heir_idx, key);
         }
     }
 
@@ -303,10 +407,9 @@ public class BPlusTree<K extends Comparable<K>, V> {
 
             Node<K, V> h = this;
             while(h != null) {
-                total--;
+                h.total--;
                 h = h.father;
             }
-            total--;
 
             DeleteResult<K, V> dr = new DeleteResult<>();
             dr.root = null;
@@ -316,8 +419,86 @@ public class BPlusTree<K extends Comparable<K>, V> {
                 return dr;
             }
 
-            dr = ((Interior<K, V>)father).adjust();
-            return dr;
+
+            Interior<K, V> fth = (Interior<K, V>) father;
+            int heir_idx = fth.children.indexOf(this);
+            boolean solve_by_borrow = false;
+            if (heir_idx < fth.children.size() - 1) {
+                // try to borrow from right sibling
+                Leaf<K, V> right_brother = (Leaf<K, V>) fth.children.get(heir_idx + 1);
+                if (right_brother.keys.size() > 1) {
+                    borrow_from_right(heir_idx);
+                    solve_by_borrow = true;
+                }
+            }
+            if (!solve_by_borrow && heir_idx > 0) {
+                // try to borrow from left sibling
+                Leaf<K, V> left_brother = (Leaf<K, V>) fth.children.get(heir_idx - 1);
+                if (left_brother.keys.size() > 1) {
+                    borrow_from_left(heir_idx);
+                    solve_by_borrow = true;
+                }
+            }
+
+            if (solve_by_borrow) {
+                return dr; // no root change
+            }
+
+            // this node will be released
+            // rearrange the linked list
+            Leaf<K, V> a = this.left;
+            Leaf<K, V> b = this;
+            Leaf<K, V> c = this.right;
+            if(a != null) a.right = c;
+            if(c != null) c.left = a;
+
+            // merge siblings and release this node
+            fth.children.remove(heir_idx);
+            if (heir_idx < fth.keys.size()) {
+                fth.keys.remove(heir_idx);
+            } else {
+                fth.keys.remove(heir_idx - 1);
+            }
+
+            // TODO: release space used by this node
+
+            if (fth.keys.size() > 0) {
+                return dr; // no root change
+            }
+
+            return fth.delete_self();
+        }
+
+        private void borrow_from_left(int heir_idx) {
+            Interior<K, V> fth = (Interior<K, V>) father;
+            Leaf<K, V> bro = (Leaf<K, V>) fth.children.get(heir_idx - 1);
+            K key = bro.keys.remove(bro.keys.size() - 1);
+            V val = bro.values.remove(bro.values.size() - 1);
+            int dup = bro.duplicate.remove(bro.duplicate.size() - 1);
+            bro.total -= dup;
+
+            keys.add(key);
+            values.add(val);
+            duplicate.add(dup);
+            total += dup;
+
+            fth.keys.set(heir_idx - 1, bro.keys.get(bro.keys.size() - 1));
+        }
+
+        private void borrow_from_right(int heir_idx) {
+            Interior<K, V> fth = (Interior<K, V>) father;
+            Leaf<K, V> bro = (Leaf<K, V>) fth.children.get(heir_idx + 1);
+            K key = bro.keys.remove(0);
+            V val = bro.values.remove(0);
+            int dup = bro.duplicate.remove(0);
+            bro.total -= dup;
+
+            keys.add(key);
+            values.add(val);
+            duplicate.add(dup);
+            total += dup;
+
+            fth.keys.set(heir_idx, key);
         }
     }
 
@@ -349,6 +530,10 @@ public class BPlusTree<K extends Comparable<K>, V> {
             }
         }
         leaf.insert(key, val);
+    }
+
+    public SearchResult<K, V> find(K key) {
+        return root.find(key);
     }
 
     public V prior(K key) {
@@ -404,25 +589,15 @@ public class BPlusTree<K extends Comparable<K>, V> {
         return leaf.values.get(idx);
     }
 
-    public void pseudo_delete(K key) {
-        SearchResult<K, V> r = root.find(key);
-        _pseudo_delete(r);
-    }
-
-    public void _pseudo_delete(SearchResult<K, V> r) {
-        if (!r.found()) {
+    public void delete(SearchResult<K, V> sr) {
+        if (!sr.found()) {
             throw new RuntimeException("no key to del");
         }
-        Leaf<K, V> leaf = (Leaf<K, V>)r.path.get(r.path.size()-1);
-        if(leaf.duplicate.get(r.idx) == 0) {
-            throw new RuntimeException("no key to del 1");
-        }
 
-        leaf.duplicate.set(r.idx, leaf.duplicate.get(r.idx) - 1);
-        Node<K, V> h = leaf;
-        while(h != null) {
-            h.total--;
-            h = h.father;
+        Leaf<K, V> leaf = (Leaf<K, V>)sr.path.get(sr.path.size()-1);
+        DeleteResult<K, V> dr = leaf.delete(sr);
+        if (dr.root != null) {
+            root = dr.root;
         }
     }
 
@@ -493,22 +668,49 @@ public class BPlusTree<K extends Comparable<K>, V> {
         System.out.println();
     }
 
-
+    public int check_total(Node<K, V> h) {
+        if (h.get_type() == LEAF) {
+            int total = 0;
+            total = ((Leaf<K, V>)h).duplicate.stream().mapToInt(Integer::intValue).sum();
+            if (total != h.total) {
+                throw new RuntimeException("total not match");
+            }
+            return total;
+        }
+        int total = 0;
+        Interior<K, V> itr = (Interior<K, V>)h;
+        for (int i = 0; i < itr.children.size(); i++) {
+            total += check_total(itr.children.get(i));
+        }
+        if (total != h.total) {
+            throw new RuntimeException("total not match");
+        }
+        return total;
+    }
 
     public static void main(String[] argv) throws IOException {
-        long start = System.currentTimeMillis();
+//        long start = System.currentTimeMillis();
 
         BPlusTree<Integer, Integer> tree = new BPlusTree<>();
-//
+
 //        for(int i = 10;i > 0;i--){
 //            tree.insert(i, i);
-//            System.out.println("Add " + i + ", cnt = " + tree.root.total);
+//            tree.print_all_keys();
+//        }
+//
+//        System.out.println("---------------------------");
+//        for (int i = 1; i <= 10; i++) {
+//            System.out.println("del " + i);
+//            SearchResult<Integer, Integer> sr = tree.find(i);
+//            tree.delete(sr);
+//            tree.check_total(tree.root);
+//            tree.print_all_keys();
 //        }
 
-//        Scanner in = new Scanner(System.in);
+        Scanner in = new Scanner(System.in);
 
-        Scanner in = new Scanner(new FileInputStream("D:\\Download\\P3369_8.in"));
-////        System.setOut(new PrintStream(new FileOutputStream("D:\\Download\\new.txt")));
+//        Scanner in = new Scanner(new FileInputStream("test_data\\P3369_8.in"));
+//        System.setOut(new PrintStream(new FileOutputStream("new.txt")));
 //
         int n = in.nextInt();
         for(int i = 0;i < n;i++) {
@@ -518,7 +720,8 @@ public class BPlusTree<K extends Comparable<K>, V> {
             if (opt == 1) {
                 tree.insert(x, x);
             } else if (opt == 2) {
-                tree.pseudo_delete(x);
+                SearchResult<Integer, Integer> sr = tree.find(x);
+                tree.delete(sr);
             } else if (opt == 3) {
                 int rank = tree.rank(x);
                 System.out.println(rank);
@@ -537,8 +740,8 @@ public class BPlusTree<K extends Comparable<K>, V> {
 
         }
 
-        long end = System.currentTimeMillis();
-        System.err.println("time = " + (end - start) + "ms");
+//        long end = System.currentTimeMillis();
+//        System.err.println("time = " + (end - start) + "ms");
     }
 
 }
