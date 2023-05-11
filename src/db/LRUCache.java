@@ -1,5 +1,7 @@
 package db;
 
+import db.exception.DBRuntimeError;
+
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -20,7 +22,7 @@ public class LRUCache implements Cache {
         this.max_cache_size = max_cache_size;
     }
 
-    private void release_block(Block block) throws IOException {
+    private void release_block(Block block) {
         blocks.remove(block.page_id);
         if (block.updated) write_back(block);
         block.data = null;
@@ -28,14 +30,18 @@ public class LRUCache implements Cache {
         free_blocks.add_back(block);
     }
 
-    private void write_back(Block block) throws IOException {
+    private void write_back(Block block) {
         long file_offset = db.get_page_offset(block.page_id);
-        db.ram.seek(file_offset);
-        db.ram.write(block.data);
-        block.updated = false;
+        try {
+            db.ram.seek(file_offset);
+            db.ram.write(block.data);
+            block.updated = false;
+        } catch (IOException e) {
+            throw new RuntimeException("LRU write back error", e);
+        }
     }
 
-    private Block cache_data(int page_id, byte[] data) throws IOException {
+    private Block cache_data(int page_id, byte[] data) {
         if (free_blocks.size == 0 && blocks.size() == max_cache_size)
             release_block(used_blocks.back());
 
@@ -57,19 +63,24 @@ public class LRUCache implements Cache {
         }
     }
 
-    private byte[] read_from_file(int page_id) throws IOException {
+    private byte[] read_from_file(int page_id) {
         long file_offset = db.get_page_offset(page_id);
         int page_size = db.get_page_size(page_id);
         byte[] data = new byte[page_size];
-        db.ram.seek(file_offset);
-        int sz = db.ram.read(data);
-        if (sz != page_size)
-            throw new IOException("incomplete page read, page_id = " + page_id
-                    + ", page_size = " + page_size + ", read_size = " + sz);
-        return data;
+
+        try {
+            db.ram.seek(file_offset);
+            int sz = db.ram.read(data);
+            if (sz != page_size)
+                throw new RuntimeException("incomplete page read, page_id = " + page_id
+                        + ", page_size = " + page_size + ", read_size = " + sz);
+            return data;
+        } catch (IOException e) {
+            throw new DBRuntimeError("IO read error", e);
+        }
     }
 
-    private Block get_block(int page_id) throws IOException {
+    private Block get_block(int page_id) {
         if (page_id < 0) throw new IllegalArgumentException("page_id must be positive");
         if (blocks.containsKey(page_id)) {
             Block block = blocks.get(page_id);
@@ -84,7 +95,7 @@ public class LRUCache implements Cache {
     }
 
     @Override
-    public byte[] read(int page_id, int pos, int length) throws IOException {
+    public byte[] read(int page_id, int pos, int length) {
         Block block = get_block(page_id);
         byte[] data = new byte[length];
         System.arraycopy(block.data, pos, data, 0, length);
@@ -92,7 +103,7 @@ public class LRUCache implements Cache {
     }
 
     @Override
-    public void write(int page_id, int pos, byte[] data, int offset, int length) throws IOException {
+    public void write(int page_id, int pos, byte[] data, int offset, int length) {
         Block block = get_block(page_id);
         if (block.data.length < pos + length)
             throw new IllegalArgumentException("write out of block bound");

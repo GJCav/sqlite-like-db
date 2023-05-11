@@ -15,7 +15,7 @@ public class Headers {
         this.db = db;
     }
 
-    public FieldValue get(String name) throws IOException {
+    public FieldValue get(String name) {
         int offset = get_offset(this.field_defs, name);
         FieldDef def = get_field_def(this.field_defs, name);
         int len = def.len;
@@ -23,7 +23,7 @@ public class Headers {
         return new FieldValue(data, def.type);
     }
 
-    public void set(String name, byte[] value) throws IOException {
+    public void set(String name, byte[] value) {
         int offset = get_offset(this.field_defs, name);
         int len = get_length(this.field_defs, name);
 
@@ -38,30 +38,30 @@ public class Headers {
         this.db.write(this.page_id, offset, value, 0, len);
     }
 
-    public void set(String name, FieldValue value) throws IOException {
+    public void set(String name, FieldValue value) {
         set(name, value.to_bytes());
     }
 
-    public void set(String name, byte val) throws IOException {
+    public void set(String name, byte val) {
         set(name, new byte[]{val});
     }
-    public void set(String name, short val) throws IOException {
+    public void set(String name, short val) {
         set(name, Bytes.from_short(val));
     }
-    public void set(String name, int val) throws IOException {
+    public void set(String name, int val) {
         set(name, Bytes.from_int(val));
     }
-    public void set(String name, long val) throws IOException {
+    public void set(String name, long val) {
         set(name, Bytes.from_long(val));
     }
-    public void set(String name, double val) throws IOException {
+    public void set(String name, double val) {
         set(name, Bytes.from_double(val));
     }
-    public void set(String name, String val) throws IOException {
+    public void set(String name, String val) {
         set(name, Bytes.from_string(val));
     }
 
-    public void set_to_default() throws IOException{
+    public void set_to_default() {
         for (FieldDef def : this.field_defs) {
             this.set(def.name, def.default_value);
         }

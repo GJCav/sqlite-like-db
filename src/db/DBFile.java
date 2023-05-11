@@ -1,5 +1,7 @@
 package db;
 
+import db.exception.DBRuntimeError;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -37,7 +39,7 @@ public class DBFile implements Closeable {
     // Page
     ////////////////////////////
 
-    public int alloc_page() throws IOException {
+    public int alloc_page() {
         int free_page = headers.get("freelist_head").to_int();
         if (free_page != 0) {
             // reuse a free page
@@ -48,16 +50,20 @@ public class DBFile implements Closeable {
             return free_page;
         } else {
             // allocate a new page
-            int page_count = headers.get("page_count").to_int();
-            long pos = get_page_offset(page_count);
-            ram.seek(pos);
-            ram.write(new byte[get_page_size(page_count)]);
-            headers.set("page_count", page_count + 1);
-            return page_count;
+            try {
+                int page_count = headers.get("page_count").to_int();
+                long pos = get_page_offset(page_count);
+                ram.seek(pos);
+                ram.write(new byte[get_page_size(page_count)]);
+                headers.set("page_count", page_count + 1);
+                return page_count;
+            } catch (IOException e) {
+                throw new DBRuntimeError("Failed to allocate new page", e);
+            }
         }
     }
 
-    public void release_page(int page_id) throws IOException {
+    public void release_page(int page_id) {
         FreePage free = new FreePage(page_id, this);
         free.headers.set("type", Page.TYPE_FREE);
         free.headers.set("next_free", headers.get("freelist_head"));
@@ -71,11 +77,11 @@ public class DBFile implements Closeable {
     protected RandomAccessFile ram;
     protected Cache cache;
 
-    public void set_cache(Cache cache) throws DBException {
+    public void set_cache(Cache cache) throws DBRuntimeError {
         try {
             this.cache.sync();
         } catch (IOException e) {
-            throw new DBException("Failed to close old cache", e);
+            throw new DBRuntimeError("Failed to close old cache", e);
         }
         this.cache = cache;
     }
@@ -88,15 +94,14 @@ public class DBFile implements Closeable {
      * @param pos
      * @param length
      * @return
-     * @throws IOException
      */
-    public byte[] read(int page_id, int pos, int length) throws IOException {
+    public byte[] read(int page_id, int pos, int length) {
         return this.cache.read(page_id, pos, length);
     }
-    public void write(int page_id, int pos, byte[] data, int offset, int length) throws IOException {
+    public void write(int page_id, int pos, byte[] data, int offset, int length) {
         this.cache.write(page_id, pos, data, offset, length);
     }
-    public void write(int page_id, int pos, byte[] data) throws IOException {
+    public void write(int page_id, int pos, byte[] data) {
         this.cache.write(page_id, pos, data);
     }
 
@@ -115,13 +120,13 @@ public class DBFile implements Closeable {
     // helpful functions
     ////////////////////////////
 
-    public long get_page_offset(int page_id)  throws IOException {
+    public long get_page_offset(int page_id) {
         if (page_id < 0) throw new IllegalArgumentException("page_id must be positive");
         if(page_id == 0) return 0;
         return HEADER_SIZE + (page_id - 1L) * get_page_size(page_id);
     }
 
-    public int get_page_size(int page_id) throws IOException {
+    public int get_page_size(int page_id) {
         if (page_id < 0) throw new IllegalArgumentException("page_id must be positive");
         if(page_id == 0) return HEADER_SIZE;
         int m = headers.get("page_size").to_byte();
@@ -131,7 +136,7 @@ public class DBFile implements Closeable {
     ////////////////////////////
     // db create
     ////////////////////////////
-    public static DBFile create(String path) throws IOException, DBException {
+    public static DBFile create(String path) throws IOException, DBRuntimeError {
         DBFile db = new DBFile(path);
         db.headers.set_to_default();
         int pos = db.headers.get_total_length();

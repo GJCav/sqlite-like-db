@@ -15,7 +15,7 @@ public class FreePage extends Page {
         headers = new Headers(HEADER_DEFS, page_id, owner);
     }
 
-    public int get_next_free() throws IOException {
+    public int get_next_free() {
         return headers.get("next_free").to_int();
     }
 }
