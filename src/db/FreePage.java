@@ -6,7 +6,7 @@ import java.util.List;
 
 public class FreePage extends Page {
     public static final List<FieldDef> HEADER_DEFS = Arrays.asList(
-            new FieldDef(1, "type", TYPE_FREE),
+            new FieldDef(1, "type", PageType.FREE),
             new FieldDef(4, "next_free", 0)
     );
 

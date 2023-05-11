@@ -1,6 +1,7 @@
 package test;
 
 import db.*;
+import db.exception.DBRuntimeError;
 
 import java.io.IOException;
 
@@ -37,7 +38,7 @@ public class DumpDB {
                     val = String.format("%d (%d bytes)", m, 1<<m);
                 }
                 info.append(val);
-            } catch (IOException e) {
+            } catch (DBRuntimeError e) {
                 info.append("ERROR, " + e.getMessage());
             }
             println(info.toString());
@@ -49,7 +50,7 @@ public class DumpDB {
         int free_page = 0;
         try {
             free_page = db.get_headers().get("freelist_head").to_int();
-        } catch (IOException e) {
+        } catch (DBRuntimeError e) {
             println("ERROR, " + e.getMessage());
             e.printStackTrace();
         }
@@ -68,7 +69,7 @@ public class DumpDB {
                 byte[] buf = db.read(free_page, offset, offset+32);
                 sbuf.append("partial_data=").append(Bytes.to_string(buf));
                 free_page = next_free;
-            } catch (IOException e) {
+            } catch (DBRuntimeError e) {
                 sbuf.append("ERROR, " + e.getMessage());
                 free_page = 0;
             }
@@ -93,12 +94,12 @@ public class DumpDB {
         int type = -1;
         try {
             type = page.get_headers().get("type").to_byte();
-        } catch (IOException e) {
+        } catch (DBRuntimeError e) {
             sbuf.append("ERROR, " + e.getMessage());
         }
 
 
-        if (type == Page.TYPE_NULL) {
+        if (type == PageType.NULL) {
             sbuf.append(type).append(" , null page");
             println(sbuf.toString());
 
@@ -108,11 +109,11 @@ public class DumpDB {
                 int pos = page.get_headers().get_total_length();
                 byte[] buf = db.read(page_id, pos, 32);
                 sbuf.append(Bytes.to_string(buf));
-            } catch (IOException e) {
+            } catch (DBRuntimeError e) {
                 sbuf.append("ERROR, " + e.getMessage());
             }
             println(sbuf.toString());
-        } else if (type == Page.TYPE_FREE) {
+        } else if (type == PageType.FREE) {
             sbuf.append(type).append(" , free page");
             println(sbuf.toString());
 
@@ -123,11 +124,11 @@ public class DumpDB {
                 int pos = page.get_headers().get_total_length();
                 byte[] buf = db.read(page_id, pos, 32);
                 sbuf.append(Bytes.to_string(buf));
-            } catch (IOException e) {
+            } catch (DBRuntimeError e) {
                 sbuf.append("ERROR, " + e.getMessage());
             }
             println(sbuf.toString());
-        } else if (type == Page.TYPE_OVERFLOW) {
+        } else if (type == PageType.OVERFLOW) {
             sbuf.append(type).append(" , overflow page");
             println(sbuf.toString());
 
@@ -138,7 +139,7 @@ public class DumpDB {
                 int pos = page.get_headers().get_total_length();
                 byte[] buf = db.read(page_id, pos, 32);
                 sbuf.append(Bytes.to_string(buf));
-            } catch (IOException e) {
+            } catch (DBRuntimeError e) {
                 sbuf.append("ERROR, " + e.getMessage());
             }
             println(sbuf.toString());
@@ -153,7 +154,7 @@ public class DumpDB {
         int page_count = -1;
         try {
             page_count = db.get_headers().get("page_count").to_int();
-        } catch (IOException e) {
+        } catch (DBRuntimeError e) {
             e.printStackTrace();
             page_count = -1;
         }
@@ -184,7 +185,7 @@ public class DumpDB {
             level--;
             try {
                 page_id = page.get_next();
-            } catch (IOException e) {
+            } catch (DBRuntimeError e) {
                 println("- ERROR on getting next page id, " + e.getMessage());
                 page_id = 0;
             }

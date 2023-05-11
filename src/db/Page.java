@@ -5,11 +5,8 @@ import java.util.Arrays;
 import java.util.List;
 
 public class Page {
-    public static final byte TYPE_NULL = 0;
-    public static final byte TYPE_FREE = 1;
-    public static final byte TYPE_OVERFLOW = 2;
     public static final List<FieldDef> HEADER_DEFS = Arrays.asList(
-            new FieldDef(1, "type", TYPE_NULL)
+            new FieldDef(1, "type", PageType.NULL)
     );
 
     protected int page_id;

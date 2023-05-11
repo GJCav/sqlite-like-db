@@ -6,7 +6,7 @@ import java.util.List;
 
 public class OverflowPage extends Page {
     public static final List<FieldDef> HEADER_DEFS = Arrays.asList(
-            new FieldDef(1, "type", TYPE_OVERFLOW),
+            new FieldDef(1, "type", PageType.OVERFLOW),
             new FieldDef(4, "next", 0)
     );
 
@@ -31,6 +31,7 @@ public class OverflowPage extends Page {
     /**
      * Get an input stream from the specified position. If the position is
      * beyond the overflow chain, return null.
+     * This stream will automatically skip page header.
      * @param pos
      * @return
      */
@@ -58,10 +59,9 @@ public class OverflowPage extends Page {
     /**
      * Get an output stream from the specified position. If the position is
      * beyond the overflow chain, allocate new pages.
-     *
+     * This stream will automatically skip page header.
      * @param pos
      * @return
-     * @throws IOException
      */
     public OutputStream get_output_stream(long pos) {
         if (pos < 0) {
@@ -124,6 +124,30 @@ public class OverflowPage extends Page {
             current_page.write(header_size + pos, new byte[] {(byte) b});
             pos++;
         }
+
+        @Override
+        public void write(byte[] b) {
+            try {
+                super.write(b);
+            } catch (IOException e) {
+                throw new RuntimeException("no sense to happen", e);
+            }
+        }
+
+        @Override
+        public void write(byte[] b, int off, int len) {
+            try {
+                super.write(b, off, len);
+            } catch (IOException e) {
+                throw new RuntimeException("no sense to happen", e);
+            }
+        }
+
+        @Override
+        public void flush() {}
+
+        @Override
+        public void close() {}
     }
 
     public static class InputStream extends java.io.InputStream {
@@ -161,5 +185,40 @@ public class OverflowPage extends Page {
             current_page = root_page;
             pos = 0;
         }
+
+        @Override
+        public int read(byte[] b) {
+            try {
+                return super.read(b);
+            } catch (IOException e) {
+                throw new RuntimeException("no sense to happen", e);
+            }
+        }
+
+        @Override
+        public int read(byte[] b, int off, int len) {
+            try {
+                return super.read(b, off, len);
+            } catch (IOException e) {
+                throw new RuntimeException("no sense to happen", e);
+            }
+        }
+
+        @Override
+        public long skip(long n) {
+            try {
+                return super.skip(n);
+            } catch (IOException e) {
+                throw new RuntimeException("no sense to happen", e);
+            }
+        }
+
+        @Override
+        public int available()  {
+            throw new RuntimeException("not supported");
+        }
+
+        @Override
+        public void close() {}
     }
 }

@@ -65,7 +65,7 @@ public class DBFile implements Closeable {
 
     public void release_page(int page_id) {
         FreePage free = new FreePage(page_id, this);
-        free.headers.set("type", Page.TYPE_FREE);
+        free.headers.set("type", PageType.FREE);
         free.headers.set("next_free", headers.get("freelist_head"));
         headers.set("freelist_head", page_id);
         headers.set("freelist_count", headers.get("freelist_count").to_int() + 1);

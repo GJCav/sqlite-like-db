@@ -9,6 +9,10 @@ public class Headers {
     public int page_id;
     public DBFile db;
 
+    //////////////////////////////////
+    // meaningful functions
+    //////////////////////////////////
+
     public Headers(List<FieldDef> field_defs, int page_id, DBFile db) {
         this.field_defs = field_defs;
         this.page_id = page_id;
@@ -37,6 +41,39 @@ public class Headers {
 
         this.db.write(this.page_id, offset, value, 0, len);
     }
+
+    public static FieldDef get_field_def(List<FieldDef> defs, String name) {
+        for (FieldDef def : defs) {
+            if (def.name.equals(name)) {
+                return def;
+            }
+        }
+        throw new IllegalArgumentException("No such field: " + name);
+    }
+
+    public static int get_offset(List<FieldDef> defs, String name) {
+        int offset = 0;
+        for (FieldDef def : defs) {
+            if (def.name.equals(name)) {
+                return offset;
+            }
+            offset += def.len;
+        }
+        throw new IllegalArgumentException("No such field: " + name);
+    }
+
+    public static int get_total_length(List<FieldDef> defs) {
+        int total = 0;
+        for (FieldDef def : defs) {
+            total += def.len;
+        }
+        return total;
+    }
+
+
+    ///////////////////////////////////////
+    // dirty wrapper to make life easier
+    //////////////////////////////////////
 
     public void set(String name, FieldValue value) {
         set(name, value.to_bytes());
@@ -83,36 +120,8 @@ public class Headers {
         return get_default(this.field_defs, name);
     }
 
-    public static FieldDef get_field_def(List<FieldDef> defs, String name) {
-        for (FieldDef def : defs) {
-            if (def.name.equals(name)) {
-                return def;
-            }
-        }
-        throw new IllegalArgumentException("No such field: " + name);
-    }
-
-    public static int get_offset(List<FieldDef> defs, String name) {
-        int offset = 0;
-        for (FieldDef def : defs) {
-            if (def.name.equals(name)) {
-                return offset;
-            }
-            offset += def.len;
-        }
-        throw new IllegalArgumentException("No such field: " + name);
-    }
-
     public static int get_length(List<FieldDef> defs, String name) {
         return get_field_def(defs, name).len;
-    }
-
-    public static int get_total_length(List<FieldDef> defs) {
-        int total = 0;
-        for (FieldDef def : defs) {
-            total += def.len;
-        }
-        return total;
     }
 
     public static FieldValue get_default(List<FieldDef> defs, String name) {
@@ -120,6 +129,9 @@ public class Headers {
         return new FieldValue(def.default_value, def.type);
     }
 
+    ///////////////////////////////////////
+    // FieldValue
+    //////////////////////////////////////
 
     public static final class FieldValue {
         byte[] value;
