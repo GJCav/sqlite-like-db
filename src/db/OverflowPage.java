@@ -15,16 +15,16 @@ public class OverflowPage extends Page {
         headers = new Headers(HEADER_DEFS, page_id, owner);
     }
 
-    public void set_next(int next) throws IOException {
+    public void set_next(int next) {
         headers.set("next", next);
     }
 
-    public int get_next() throws IOException {
+    public int get_next() {
         return headers.get("next").to_int();
     }
 
 
-    public int get_available_size() throws IOException {
+    public int get_available_size() {
         return owner.get_page_size(page_id) - this.get_page_header_size();
     }
 
@@ -33,9 +33,8 @@ public class OverflowPage extends Page {
      * beyond the overflow chain, return null.
      * @param pos
      * @return
-     * @throws IOException
      */
-    public InputStream get_input_stream(long pos) throws IOException {
+    public InputStream get_input_stream(long pos) {
         if (pos < 0) {
             throw new IllegalArgumentException("pos must be >= 0");
         }
@@ -64,7 +63,7 @@ public class OverflowPage extends Page {
      * @return
      * @throws IOException
      */
-    public OutputStream get_output_stream(long pos) throws IOException {
+    public OutputStream get_output_stream(long pos) {
         if (pos < 0) {
             throw new IllegalArgumentException("pos must be >= 0");
         }
@@ -87,11 +86,11 @@ public class OverflowPage extends Page {
         return out;
     }
 
-    public OutputStream get_output_stream() throws IOException {
+    public OutputStream get_output_stream() {
         return get_output_stream(0);
     }
 
-    public InputStream get_input_stream() throws IOException {
+    public InputStream get_input_stream() {
         return get_input_stream(0);
     }
 
@@ -102,7 +101,7 @@ public class OverflowPage extends Page {
         private int available_size = 0;
         private int header_size = 0;
 
-        public OutputStream(OverflowPage root_page) throws IOException {
+        public OutputStream(OverflowPage root_page) {
             this.root_page = root_page;
             this.current_page = root_page;
             available_size = root_page.get_available_size();
@@ -110,7 +109,7 @@ public class OverflowPage extends Page {
         }
 
         @Override
-        public void write(int b) throws IOException {
+        public void write(int b)  {
             if (pos == available_size) {
                 if(current_page.get_next() == 0) {
                     int new_page_id = root_page.owner.alloc_page();
@@ -134,7 +133,7 @@ public class OverflowPage extends Page {
         private int available_size = 0;
         private int header_size = 0;
 
-        public InputStream(OverflowPage root_page) throws IOException {
+        public InputStream(OverflowPage root_page)  {
             this.root_page = root_page;
             this.current_page = root_page;
             available_size = root_page.owner.get_page_size(root_page.page_id)
@@ -143,7 +142,7 @@ public class OverflowPage extends Page {
         }
 
         @Override
-        public int read() throws IOException {
+        public int read() {
             if (pos == available_size) {
                 int next_page_id = current_page.get_next();
                 if (next_page_id == 0) {
@@ -158,7 +157,7 @@ public class OverflowPage extends Page {
         }
 
         @Override
-        public void reset() throws IOException {
+        public void reset() {
             current_page = root_page;
             pos = 0;
         }

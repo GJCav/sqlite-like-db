@@ -39,12 +39,12 @@ public class Page {
      * @return
      * @throws IOException
      */
-    public byte[] read(int pos, int length) throws IOException {
+    public byte[] read(int pos, int length) {
         return owner.read(page_id, pos, length);
     }
 
 
-    public void write(int pos, byte[] data) throws IOException {
+    public void write(int pos, byte[] data) {
         owner.write(page_id, pos, data);
     }
 
@@ -54,13 +54,12 @@ public class Page {
      * @param data
      * @param offset
      * @param length
-     * @throws IOException
      */
-    public void write(int pos, byte[] data, int offset, int length) throws IOException {
+    public void write(int pos, byte[] data, int offset, int length) {
         owner.write(page_id, pos, data, offset, length);
     }
 
-    public void init_page() throws IOException {
+    public void init_page() {
         headers.set_to_default();
     }
 }

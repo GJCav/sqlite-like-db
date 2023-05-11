@@ -1,5 +1,7 @@
 package db;
 
+import db.exception.*;
+
 import java.io.IOException;
 
 public interface Cache {
@@ -13,10 +15,10 @@ public interface Cache {
      * @param length
      * @return
      */
-    byte[] read(int page_id, int pos, int length) throws IOException;
-    void write(int page_id, int pos, byte[] data, int offset, int length) throws IOException;
+    byte[] read(int page_id, int pos, int length);
+    void write(int page_id, int pos, byte[] data, int offset, int length);
 
-    default void write(int page_id, int pos, byte[] data) throws IOException {
+    default void write(int page_id, int pos, byte[] data) {
         write(page_id, pos, data, 0, data.length);
     }
 
