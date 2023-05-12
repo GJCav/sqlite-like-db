@@ -82,6 +82,16 @@ public class Bytes {
         return to_long(arr, 0);
     }
 
+    public static byte[] from_float(float val) { return from_int(Float.floatToRawIntBits(val));}
+
+    public static Object to_float(byte[] data, int offset) {
+        return Float.intBitsToFloat(to_int(data, offset));
+    }
+
+    public static Object to_float(byte[] data) {
+        return to_float(data, 0);
+    }
+
     public static byte[] from_double(double val) {
         return from_long(Double.doubleToRawLongBits(val));
     }
