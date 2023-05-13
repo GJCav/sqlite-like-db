@@ -226,15 +226,12 @@ public class BInteriorNode extends BTreeNode {
         pseudo.left.set_father(this.page_id);
         pseudo.right.set_father(this.page_id);
 
-        int total = get_total();
-        total += pseudo.left.get_total();
-        total += pseudo.right.get_total();
-        set_total(total);
+        update_total();
     }
 
     private void update_total() {
         int total = 0;
-        for (int i = 0; i < get_slot_count(); i++) {
+        for (int i = 0; i <= get_slot_count(); i++) {
             int child_id = get_child(i);
             BTreeNode child = new BTreeNode(child_id, owner);
             total += child.get_total();
@@ -288,7 +285,7 @@ public class BInteriorNode extends BTreeNode {
         for (int i = old_count - 1;i >= mid;i--){
             remove_slot_cell(i);
         }
-        set_total(get_total() - right.get_total());
+        update_total();
 
         BPseudoInterior pseudo = new BPseudoInterior(
             key, this, right
@@ -384,7 +381,7 @@ public class BInteriorNode extends BTreeNode {
             left.add_slot_cell(left.get_slot_count(), cell);
             left.set_tail_child(C);
             page_C.set_father(left.page_id);
-            left.set_total(left.get_total() + page_C.get_total());
+            left.update_total();
 
             // father
             father.set_child(heir_idx, left.page_id);
@@ -414,7 +411,7 @@ public class BInteriorNode extends BTreeNode {
             cell.set_child(A);
             right.add_slot_cell(0, cell);
             page_A.set_father(right.page_id);
-            right.set_total(right.get_total() + page_A.get_total());
+            right.update_total();
 
             // father
             father.remove_slot_cell(heir_idx);

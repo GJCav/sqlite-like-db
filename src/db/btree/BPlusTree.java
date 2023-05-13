@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Queue;
 
 public class BPlusTree {
-    public BTreeNode root;
+    private BTreeNode root;
     private DBFile db;
 
     public BPlusTree(int root_page, DBFile db) {
@@ -218,5 +218,43 @@ public class BPlusTree {
                 lf = null;
             }
         }
+    }
+
+    public int _check_total(BTreeNode h) {
+        if (h.get_page_type() == PageType.BTREE_LEAF) {
+            BLeafNode leaf = new BLeafNode(h.get_page_id(), db);
+            int total = leaf.get_total();
+
+            if (total != leaf.get_slot_count()) {
+                throw new RuntimeException("total error, expect " + leaf.get_slot_count() + ", get " + total);
+            }
+            return leaf.get_slot_count();
+        }
+
+        int total = 0;
+        int child_cnt = h.get_slot_count()+1;
+        BInteriorNode node = new BInteriorNode(h.get_page_id(), db);
+        for(int i = 0;i < child_cnt;i++){
+            BTreeNode child = new BTreeNode(node.get_child(i), db);
+            total += _check_total(child);
+        }
+        if (total != h.get_total()) {
+            throw new RuntimeException("total error, expect " + total
+                    + ", get " + h.get_total() + ", at (" + _print_keys(node) + ")");
+        }
+        return total;
+    }
+
+    public String _print_keys(BInteriorNode node) {
+        StringBuilder sbuf = new StringBuilder();
+        for(Payload p : node.get_keys()) {
+            sbuf.append(p.get_obj(0));
+            sbuf.append(",");
+        }
+        return sbuf.toString();
+    }
+
+    public void _check_total() {
+        _check_total(root);
     }
 }

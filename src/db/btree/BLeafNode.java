@@ -309,7 +309,8 @@ public class BLeafNode extends BTreeNode {
         remove_slot_cell(idx);
 
         BTreeNode h = this;
-        if (h != null) {
+        while (h != null) {
+            if (h.get_page_type() == PageType.BTREE_LEAF) continue;
             h.set_total(h.get_total()-1);
             if (h.get_father() != 0) {
                 h = new BTreeNode(h.get_father(), owner);

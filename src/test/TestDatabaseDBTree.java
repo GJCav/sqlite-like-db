@@ -19,7 +19,7 @@ public class TestDatabaseDBTree {
             }
 
             DBFile db = DBFile.create("test.db");
-//            db.set_cache(new LRUCache(db, 1));
+            db.set_cache(new LRUCache(db, 3));
 
             int page_id = db.alloc_page();
             List<Integer> key_types = Arrays.asList(ObjType.INT, ObjType.INT);
@@ -36,8 +36,10 @@ public class TestDatabaseDBTree {
                 Payload key = Payload.create(key_types, Arrays.asList(i, i));
                 Payload value = Payload.create(val_types, Arrays.asList("hello worl" + i));
 
-//                System.out.println("inserting " + key + " -> " + value);
+                System.out.println("inserting " + key + " -> " + value);
                 tree.insert(key, value);
+                tree._print_tree();
+                tree._check_total();
             }
 
             tree._print_leaf_nodes();
@@ -51,6 +53,7 @@ public class TestDatabaseDBTree {
                 tree.delete(sr);
 
                 tree._print_tree();
+                tree._check_total();
             }
 
             db.close();
