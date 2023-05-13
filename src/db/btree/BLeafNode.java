@@ -134,7 +134,6 @@ public class BLeafNode extends BTreeNode {
             throw new IndexOutOfBoundsException("slot_id out of range, got " + slot_id);
         }
 
-        int cell_id = get_slot(slot_id);
         LeafCell cell = get_slot_cell(slot_id);
         return cell.get_key();
     }
@@ -143,7 +142,8 @@ public class BLeafNode extends BTreeNode {
         List<Payload> keys = new ArrayList<>();
         List<Integer> cell_ids = get_slots();
         for (int cell_id : cell_ids) {
-            LeafCell cell = get_slot_cell(cell_id);
+            byte[] cell_data = read_cell_data(cell_id);
+            LeafCell cell = new LeafCell(cell_id, cell_data, get_key_types());
             keys.add(cell.get_key());
         }
         return keys;
@@ -204,6 +204,7 @@ public class BLeafNode extends BTreeNode {
             int unit_id = storage.allocate_unit();
             cell.set_unit_id(unit_id);
             storage.set_unit(unit_id, val);
+
             add_slot_cell(idx, cell);
 
             set_total(get_total()+1);
@@ -244,8 +245,7 @@ public class BLeafNode extends BTreeNode {
         );
 
         for (int i = mid + 1; i < get_slot_count(); i++) {
-            int src_cell_id = get_slot(i);
-            LeafCell src = get_slot_cell(src_cell_id);
+            LeafCell src = get_slot_cell(i);
 
             int dst_cell_id = right_page.allocate_cell();
             LeafCell dst = LeafCell.create(dst_cell_id, get_key_types());
@@ -284,6 +284,8 @@ public class BLeafNode extends BTreeNode {
                 right_page
         );
 
+        // fth may change after its father split
+        fth = get_father();
         if (fth == 0) {
             root_page_id = pseudo.to_interior().get_page_id();
         } else {
@@ -329,7 +331,7 @@ public class BLeafNode extends BTreeNode {
         boolean solve_by_borrow = false;
         if (heir_idx <= fth.get_slot_count() - 1) {
             // borrow from right
-            BLeafNode right_bro = new BLeafNode(fth.get_slot(heir_idx+1), owner);
+            BLeafNode right_bro = new BLeafNode(fth.get_child(heir_idx+1), owner);
             if (right_bro.get_slot_count() > 1) {
                 borrow_from_right(heir_idx);
                 solve_by_borrow = true;
@@ -337,7 +339,7 @@ public class BLeafNode extends BTreeNode {
         }
         if (!solve_by_borrow && heir_idx > 0) {
             // borrow from left
-            BLeafNode left_bro = new BLeafNode(fth.get_slot(heir_idx-1), owner);
+            BLeafNode left_bro = new BLeafNode(fth.get_child(heir_idx-1), owner);
             if (left_bro.get_slot_count() > 1) {
                 borrow_from_left(heir_idx);
                 solve_by_borrow = true;
@@ -387,7 +389,7 @@ public class BLeafNode extends BTreeNode {
     private void borrow_from_left(int heir_idx) {
         BInteriorNode fth = new BInteriorNode(get_father(), owner);
 
-        BLeafNode left_bro = new BLeafNode(fth.get_slot(heir_idx-1), owner);
+        BLeafNode left_bro = new BLeafNode(fth.get_child(heir_idx-1), owner);
         LeafCell left_cell = left_bro.get_slot_cell(left_bro.get_slot_count()-1);
         Payload value = left_bro.storage.get_unit(left_cell.get_unit_id());
         left_bro.remove_slot_cell(left_bro.get_slot_count()-1);
@@ -410,7 +412,7 @@ public class BLeafNode extends BTreeNode {
     private void borrow_from_right(int heir_idx) {
         BInteriorNode fth = new BInteriorNode(get_father(), owner);
 
-        BLeafNode right_bro = new BLeafNode(fth.get_slot(heir_idx+1), owner);
+        BLeafNode right_bro = new BLeafNode(fth.get_child(heir_idx+1), owner);
         LeafCell right_cell = right_bro.get_slot_cell(0);
         Payload value = right_bro.storage.get_unit(right_cell.get_unit_id());
         right_bro.remove_slot_cell(0);

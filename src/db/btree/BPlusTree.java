@@ -6,10 +6,12 @@ import db.PageType;
 import db.exception.DBRuntimeError;
 
 import java.util.Collections;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Queue;
 
 public class BPlusTree {
-    private BTreeNode root;
+    public BTreeNode root;
     private DBFile db;
 
     public BPlusTree(int root_page, DBFile db) {
@@ -146,5 +148,75 @@ public class BPlusTree {
             cur = new BTreeNode(interior.get_child(0), db);
         }
         return new BLeafNode(cur.get_page_id(), db);
+    }
+
+    public void _print_tree() {
+        Queue<Integer> q = new LinkedList<>();
+        Queue<Integer> d = new LinkedList<>();
+        q.add(root.get_page_id());
+        d.add(0);
+
+        int ld = 0;
+        while(q.size() > 0) {
+            int page_id = q.remove();
+            int cd = d.remove();
+            if (cd != ld) {
+                System.out.println();
+                ld = cd;
+            }
+
+            BTreeNode node = new BTreeNode(page_id, db);
+            StringBuilder sbuf = new StringBuilder("(");
+            if (node.get_page_type() == PageType.BTREE_INTERIOR) {
+                BInteriorNode interior = new BInteriorNode(page_id, db);
+                for(Payload p : interior.get_keys()) {
+                    sbuf.append(p.get_obj(0));
+                    sbuf.append(",");
+                }
+                int cnt = interior.get_slot_count();
+                for(int i = 0;i <= cnt;i++) {
+                    q.add(interior.get_child(i));
+                    d.add(cd+1);
+                }
+            } else if (node.get_page_type() == PageType.BTREE_LEAF){
+                BLeafNode leaf = new BLeafNode(page_id, db);
+                for(Payload p : leaf.get_keys()) {
+                    sbuf.append(p.get_obj(0));
+                    sbuf.append(",");
+                }
+            } else {
+                throw new DBRuntimeError("Invalid page type, " +
+                        "expect BTREE_INTERIOR or BTREE_LEAF, " +
+                        "got " + node.get_page_type());
+            }
+            sbuf.append(")");
+
+            int fth = node.get_father();
+            if(fth != 0) {
+                BInteriorNode interior = new BInteriorNode(fth, db);
+                Payload key = interior.get_keys().get(0);
+                sbuf.append("^").append(key.get_obj(0));
+            }
+            sbuf.append("    ");
+            System.out.print(sbuf.toString());
+        }
+        System.out.println();
+    }
+
+    public void _print_leaf_nodes() {
+        BLeafNode lf = leftmost_leaf();
+        while(lf != null) {
+            System.out.println("leaf " + lf.get_page_id());
+            for(int i = 0;i < lf.get_slot_count();i++) {
+                System.out.println("- " + lf.get_key(i) + " -> " + lf.get_value(i));
+            }
+
+            int right_id = lf.get_right_sibling();
+            if (right_id != 0) {
+                lf = new BLeafNode(right_id, db);
+            } else {
+                lf = null;
+            }
+        }
     }
 }

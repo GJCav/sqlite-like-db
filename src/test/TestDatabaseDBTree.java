@@ -19,7 +19,7 @@ public class TestDatabaseDBTree {
             }
 
             DBFile db = DBFile.create("test.db");
-            db.set_cache(new LRUCache(db, 100));
+//            db.set_cache(new LRUCache(db, 1));
 
             int page_id = db.alloc_page();
             List<Integer> key_types = Arrays.asList(ObjType.INT, ObjType.INT);
@@ -31,28 +31,26 @@ public class TestDatabaseDBTree {
                     val_types
             );
 
-            for(int i = 0;i < 20;i++) {
+            int count = 10;
+            for(int i = 0;i <= count;i++) {
                 Payload key = Payload.create(key_types, Arrays.asList(i, i));
-                Payload value = Payload.create(val_types, Arrays.asList("hello world " + i));
+                Payload value = Payload.create(val_types, Arrays.asList("hello worl" + i));
 
-                System.out.println("inserting " + key + " -> " + value);
+//                System.out.println("inserting " + key + " -> " + value);
                 tree.insert(key, value);
             }
 
-            BLeafNode lf = tree.leftmost_leaf();
-            while(lf != null) {
-                System.out.println("leaf " + lf.get_page_id());
-                List<Integer> slots = lf.get_slots();
-                for(int idx : slots) {
-                    System.out.println("  " + lf.get_key(idx) + " -> " + lf.get_value(idx));
-                }
+            tree._print_leaf_nodes();
 
-                int right_id = lf.get_right_sibling();
-                if (right_id != 0) {
-                    lf = new BLeafNode(right_id, db);
-                } else {
-                    lf = null;
-                }
+            System.out.println("---------------- delete -------------------");
+            tree._print_tree();
+            for(int i = count;i >=0 ;i--){
+                Payload key = Payload.create(key_types, Arrays.asList(i, i));
+                SearchResult sr = tree.search(key);
+                System.out.println("deleting " + key);
+                tree.delete(sr);
+
+                tree._print_tree();
             }
 
             db.close();

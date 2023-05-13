@@ -296,5 +296,10 @@ public class Payload implements Comparable<Payload> {
                         + ", target type is STRING");
             return (String) obj;
         }
+
+        @Override
+        public String toString() {
+            return obj.toString();
+        }
     }
 }

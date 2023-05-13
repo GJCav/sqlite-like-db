@@ -51,6 +51,8 @@ public class BInteriorNode extends BTreeNode {
     ////////////////////////////////////////////////////////////
     protected InteriorCell get_slot_cell(int slot_id) {
         if (slot_id < 0 || slot_id >= get_slot_count()) {
+            System.out.println("BInteriorNode at page " + page_id);
+            _print_header();
             throw new RuntimeException("slot_id out of range, got " + slot_id + ", expect [0, " + get_slot_count() + ")");
         }
         int cell_id = get_slot(slot_id);
@@ -58,6 +60,13 @@ public class BInteriorNode extends BTreeNode {
         return new InteriorCell(cell_id, data, get_key_types());
     }
 
+    /**
+     * this method will not corrupt the consistence between slot_count and slots.
+     * the data of cell are wrote to database.
+     *
+     * @param slot_id
+     * @param cell
+     */
     protected void add_slot_cell(int slot_id, InteriorCell cell) {
         if (get_slot_count() + 1 > get_slot_capacity()) {
             throw new DBRuntimeError("no more slot available");
@@ -70,6 +79,13 @@ public class BInteriorNode extends BTreeNode {
         write_cell_data(cell.cell_id, cell.data);
     }
 
+    /**
+     * this method will not corrupt the consistence between slot_count and slots.
+     * the cell related at slots[slot_id] is released.
+     *
+     * @param slot_id
+     * @return
+     */
     protected InteriorCell remove_slot_cell(int slot_id) {
         if (slot_id < 0 || slot_id >= get_slot_count()) {
             throw new RuntimeException("slot_id out of range");
@@ -132,6 +148,11 @@ public class BInteriorNode extends BTreeNode {
         }
     }
 
+    /**
+     * if slot_id == slot_count, append a new slot
+     * @param slot_id
+     * @param key
+     */
     public void set_key(int slot_id, Payload key) {
         int slot_count = get_slot_count();
 
@@ -168,16 +189,12 @@ public class BInteriorNode extends BTreeNode {
         List<Payload> keys = new ArrayList<>();
         List<Integer> cell_ids = get_slots();
         for (int cell_id : cell_ids) {
-            InteriorCell cell = get_slot_cell(cell_id);
+            byte[] cell_data = read_cell_data(cell_id);
+            InteriorCell cell = new InteriorCell(cell_id, cell_data, get_key_types());
             keys.add(cell.get_key());
         }
         return keys;
     }
-
-
-    //////////////////////////////////////////////////
-    // getters & setters
-    //////////////////////////////////////////////////
 
 
 
@@ -198,9 +215,12 @@ public class BInteriorNode extends BTreeNode {
         }
 
         idx = -(idx+1);
+
         int cell_id = allocate_cell();
         InteriorCell cell = InteriorCell.create(cell_id, get_key_types());
+        cell.set_key(key);
         add_slot_cell(idx, cell);
+
         set_child(idx, pseudo.left.get_page_id());
         set_child(idx+1, pseudo.right.get_page_id());
         pseudo.left.set_father(this.page_id);
@@ -243,12 +263,16 @@ public class BInteriorNode extends BTreeNode {
 
         // make right node
         for (int i = mid+1; i < get_slot_count(); i++) {
-            int cell_id = get_slot(i);
-            InteriorCell cell = get_slot_cell(i);
-            right.add_slot_cell(i-mid-1, cell);
-            right.write_cell_data(cell_id, cell.data);
+            InteriorCell src_cell = get_slot_cell(i);
 
-            int child_id = cell.get_child();
+            int cell_id = right.allocate_cell();
+            InteriorCell dst_cell = InteriorCell.create(cell_id, get_key_types());
+            dst_cell.set_key(src_cell.get_key());
+            dst_cell.set_child(src_cell.get_child());
+
+            right.add_slot_cell(i-mid-1, src_cell);
+
+            int child_id = src_cell.get_child();
             BTreeNode child = new BTreeNode(child_id, owner);
             child.set_father(right_page_id);
         }
@@ -287,7 +311,7 @@ public class BInteriorNode extends BTreeNode {
 
     public int get_heir_idx(int page_id) {
         int slot_count = get_slot_count();
-        for (int i = 0; i < slot_count; i++) {
+        for (int i = 0; i <= slot_count; i++) {
             int child_id = get_child(i);
             if (child_id == page_id) {
                 return i;

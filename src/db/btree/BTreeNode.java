@@ -5,7 +5,6 @@ import db.exception.DBRuntimeError;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -84,6 +83,7 @@ public class BTreeNode extends Page {
         Headers hdr = new Headers(defs, page_id, owner);
         hdr.set_to_default();
         BTreeNode node = new BTreeNode(page_id, owner);
+        node.headers = hdr;
         return node;
     }
 
@@ -132,6 +132,10 @@ public class BTreeNode extends Page {
         return headers.get("slots").to_ints()[idx];
     }
 
+    /**
+     * this method will not corrupt consistence of slot_count
+     * @param slots
+     */
     public void set_slots(List<Integer> slots) {
         int slot_capacity = get_slot_capacity();
         if (slots.size() > slot_capacity) {
@@ -145,6 +149,14 @@ public class BTreeNode extends Page {
         headers.set("slot_count", Bytes.from_int(slots.size()));
     }
 
+    /**
+     * this method will not corrupt consistence of slot_count.
+     * but cells that correspond to removed slot value will not be freed.
+     * remember to free them manually to avoid space leak.
+     *
+     * @param idx
+     * @return
+     */
     public int remove_slot(int idx) {
         int slot_count = get_slot_count();
         if (idx < 0 || idx >= slot_count) {
@@ -162,6 +174,12 @@ public class BTreeNode extends Page {
     // for internal use only
     ///////////////////////////////////////////////////////////
 
+    /**
+     * the returned cell is dangling. make sure you will use
+     * add this cell to a slot.
+     *
+     * @return
+     */
     protected int allocate_cell() {
         int cell_size = get_cell_size();
 
@@ -202,9 +220,12 @@ public class BTreeNode extends Page {
         check_cell_id(cell_id);
 
         int next_free = get_free_cell();
-        FreeCell cell = FreeCell.create(next_free, get_cell_size());
+
+        FreeCell cell = FreeCell.create(cell_id, get_cell_size());
+        cell.set_next(next_free);
         byte[] cell_data = cell.get_data();
         write_cell_data(cell_id, cell_data);
+
         set_free_cell(cell_id);
     }
 
@@ -241,9 +262,20 @@ public class BTreeNode extends Page {
     // getters
     ////////////////////////////////////////////////////////////
 
+    /**
+     * if this node is a leaf node, return the number of cells in this node.
+     * if this node is an interior node, return the number of all keys in the subtree.
+     * @return
+     */
     public int get_total() {
         if (get_page_type() == PageType.BTREE_INTERIOR) {
-            return headers.get("total").to_int();
+            for(FieldDef def : headers.field_defs) {
+                if (def.name.equals("total"))
+                    return headers.get("total").to_int();
+                else if (def.name.equals("reserved1"))
+                    return headers.get("reserved1").to_int();
+            }
+            throw new RuntimeException("absurd situation");
         } else if (get_page_type() == PageType.BTREE_LEAF) {
             return get_slot_count();
         } else {
@@ -251,6 +283,11 @@ public class BTreeNode extends Page {
         }
     }
 
+    /**
+     * if this node is a leaf node, nothing will happen.
+     * if this node is an interior node, set the number of all keys in the subtree.
+     * @param total
+     */
     public void set_total(int total) {
         if (get_page_type() == PageType.BTREE_INTERIOR) {
             headers.set("total", total);
@@ -341,5 +378,12 @@ public class BTreeNode extends Page {
 
     public int get_father() {
         return headers.get("father").to_int();
+    }
+
+
+    public void _print_header() {
+        headers.field_defs.forEach(def -> {
+            System.out.println("- " + def.name + ": " + headers.get(def.name));
+        });
     }
 }

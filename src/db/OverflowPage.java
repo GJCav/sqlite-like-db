@@ -182,9 +182,10 @@ public class OverflowPage extends Page {
                 current_page = new OverflowPage(next_page_id, root_page.owner);
                 pos = 0;
             }
-            int b = current_page.read(header_size + pos, 1)[0];
+            byte b = current_page.read(header_size + pos, 1)[0];
+            int v = b & 0xff; // 大坑，不能直接 (int)b，否则会返回负数，导致 EOF 判断失效
             pos++;
-            return b;
+            return v;
         }
 
         @Override

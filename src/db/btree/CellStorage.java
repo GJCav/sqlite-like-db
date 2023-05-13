@@ -33,7 +33,7 @@ public class CellStorage {
     }
 
     public static CellStorage create(OverflowPage page, int[] value_types) {
-        System.out.println("[CellStorage] create cell storage on page " + page.get_page_id());
+//        System.out.println("[CellStorage] create cell storage on page " + page.get_page_id());
 
         if (page == null) {
             throw new NullPointerException("page is null");
@@ -91,7 +91,7 @@ public class CellStorage {
             int sz = in.read(data);
             int next_free = Bytes.to_int(data);
             if (sz != 4) {
-                throw new DBRuntimeError("CellStorage unit corrupted, incomplete next_free data");
+                throw new DBRuntimeError("CellStorage unit corrupted, incomplete next_free data, got " + sz + " bytes");
             }
             set_free_unit(next_free);
 
