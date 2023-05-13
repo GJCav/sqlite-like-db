@@ -267,7 +267,7 @@ public class BInteriorNode extends BTreeNode {
             dst_cell.set_key(src_cell.get_key());
             dst_cell.set_child(src_cell.get_child());
 
-            right.add_slot_cell(i-mid-1, src_cell);
+            right.add_slot_cell(i-mid-1, dst_cell);
 
             int child_id = src_cell.get_child();
             BTreeNode child = new BTreeNode(child_id, owner);

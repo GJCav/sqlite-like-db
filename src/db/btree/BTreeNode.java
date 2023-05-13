@@ -290,7 +290,12 @@ public class BTreeNode extends Page {
      */
     public void set_total(int total) {
         if (get_page_type() == PageType.BTREE_INTERIOR) {
-            headers.set("total", total);
+            for(FieldDef def : headers.field_defs) {
+                if (def.name.equals("total"))
+                    headers.set("total", total);
+                else if (def.name.equals("reserved1"))
+                    headers.set("reserved1", total);
+            }
         } else if (get_page_type() == PageType.BTREE_LEAF) {
             return; // do nothing
         } else {

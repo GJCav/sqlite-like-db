@@ -83,7 +83,7 @@ public class LRUCache implements Cache {
     }
 
     private Block get_block(int page_id) {
-        if (page_id < 0) throw new IllegalArgumentException("page_id must be positive");
+        if (page_id < 0) throw new IllegalArgumentException("page_id must be positive, page_id="+page_id);
         if (blocks.containsKey(page_id)) {
 //            System.out.println("[LRUCache] hit cache page " + page_id);
 

@@ -257,4 +257,8 @@ public class BPlusTree {
     public void _check_total() {
         _check_total(root);
     }
+
+    public int root_page() {
+        return root.get_page_id();
+    }
 }

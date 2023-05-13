@@ -31,19 +31,19 @@ public class TestDatabaseDBTree {
                     val_types
             );
 
-            int count = 10;
+            int count = 11;
             for(int i = 0;i <= count;i++) {
                 Payload key = Payload.create(key_types, Arrays.asList(i, i));
                 Payload value = Payload.create(val_types, Arrays.asList("hello worl" + i));
 
                 System.out.println("inserting " + key + " -> " + value);
                 tree.insert(key, value);
-                tree._print_tree();
-                tree._check_total();
+//                tree._print_tree();
+//                tree._check_total();
             }
 
-            tree._print_leaf_nodes();
-
+//            tree._print_leaf_nodes();
+//
             System.out.println("---------------- delete -------------------");
             tree._print_tree();
             for(int i = count;i >=0 ;i--){
