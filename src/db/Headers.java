@@ -171,5 +171,9 @@ public class Headers {
         public String toString() {
             return Objects.toString(to_object());
         }
+
+        public int[] to_ints() {
+            return Bytes.to_ints(this.value);
+        }
     }
 }

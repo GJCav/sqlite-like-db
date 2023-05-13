@@ -25,6 +25,8 @@ public class Page {
 
     public int get_page_id() { return page_id; }
 
+    public byte get_page_type() { return headers.get("type").to_byte(); }
+
     public Headers get_headers() { return headers; }
 
     public DBFile get_owner() { return owner; }

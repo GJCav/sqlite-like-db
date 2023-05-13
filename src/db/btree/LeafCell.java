@@ -1,14 +1,18 @@
-package db;
+package db.btree;
 
+import db.Bytes;
+import db.FieldDef;
 import db.exception.DBRuntimeError;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class LeafCell extends Cell {
     public static final List<FieldDef> HEADERS = new ArrayList() {{
         add(new FieldDef(1, "type", CellType.LEAF));
-        add(new FieldDef(4, "overflow_offset", 0));
+        add(new FieldDef(4, "unit_id", 0));
     }};
 
     private List<Integer> payload_types = new ArrayList<>();
@@ -32,13 +36,37 @@ public class LeafCell extends Cell {
                     + " bytes, got " + data.length + " bytes");
     }
 
-    public int get_overflow_offset() {
+    public LeafCell(int cell_id, byte[] data, int[] types) {
+        super(cell_id, data);
+        if (payload_types == null) throw new NullPointerException("payload_types must not be null");
+
+        header_defs = HEADERS;
+        this.payload_types = Arrays.stream(types).boxed().collect(Collectors.toList());
+
+        int exp_size = get_header_size() + ObjType.get_size(payload_types);
+        if (data.length != exp_size)
+            throw new DBRuntimeError("data size mismatch, expect " + exp_size
+                    + " bytes, got " + data.length + " bytes");
+    }
+
+    public static LeafCell create(int cell_id, byte[] data, int[] key_types) {
+        data[0] = CellType.LEAF;
+        LeafCell cell = new LeafCell(cell_id, data, key_types);
+        return cell;
+    }
+
+    public static LeafCell create(int cell_id, int[] key_types) {
+        return create(cell_id, new byte[ObjType.get_size(key_types)], key_types);
+    }
+
+
+    public int get_unit_id() {
         int val = Bytes.to_int(data, 1);
         return val;
     }
 
-    public void set_overflow_offset(int offset) {
-        byte[] val = Bytes.from_int(offset);
+    public void set_unit_id(int id) {
+        byte[] val = Bytes.from_int(id);
         System.arraycopy(val, 0, data, 1, val.length);
     }
 

@@ -1,4 +1,4 @@
-package db;
+package db.btree;
 
 import java.util.List;
 
@@ -40,6 +40,19 @@ public final class ObjType {
         }
     }
 
+    public static String to_string(List<Integer> types) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("[");
+        for(int i = 0; i < types.size(); i++){
+            sb.append(to_string(types.get(i)));
+            if(i != types.size() - 1){
+                sb.append(", ");
+            }
+        }
+        sb.append("]");
+        return sb.toString();
+    }
+
     public static int get_size(int type) {
         if (type == INT) return 4;
         if (type == LONG) return 8;
@@ -51,6 +64,14 @@ public final class ObjType {
 
     public static int get_size(List<Integer> types) {
         return types.stream().mapToInt(ObjType::get_size).sum();
+    }
+
+    public static int get_size(int[] types){
+        int size = 0;
+        for(int type : types){
+            size += get_size(type);
+        }
+        return size;
     }
 
     public static boolean is_type_string(int type) {

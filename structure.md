@@ -10,19 +10,26 @@
 
 BNode
 
-| len    | name        | description              |
-| ------ | ----------- | ------------------------ |
-| 1      | type        | page type, = PAGE_B_NULL |
-| 4      | hdr_size    | header size              |
-| 4      | father      | page number of father    |
-| 4      | key_count   |                          |
-| 4      | cell_size   |                          |
-| 4      | cell_count  |                          |
-| 4      | free_cell   | free cell head           |
-| 4      | key_count   | key count in this table  |
-| 4      | value_count |                          |
-| var(4) | key_types   |                          |
-| var(4) | value_types |                          |
+| len    | name          | description              |
+| ------ | ------------- | ------------------------ |
+| 1      | type          | page type, = PAGE_B_NULL |
+| 4      | hdr_size      | header size              |
+| 4      | father        | page number of father    |
+| 4      | cell_size     |                          |
+| 4      | cell_count    |                          |
+| 4      | free_cell     | free cell head           |
+| 4      | key_count     | key count in this table  |
+| 4      | value_count   |                          |
+| var(4) | key_types     |                          |
+| var(4) | value_types   |                          |
+| 4      | reserved1     |                          |
+| 4      | reserved1     |                          |
+| 4      | reserved1     |                          |
+| var(4) | key_types     |                          |
+| var(4) | value_types   |                          |
+| 4      | slot_capacity |                          |
+| 4      | slot_count    |                          |
+| var(4) | slots         |                          |
 
 * hdr_size: 在建表时确定，是所有 B 树节点类型的 header size 最大值 + 储存类型信息所需空间 + cell_ptrs
 * key_count、key_types、value_count、value_types 在建表时确定，每个节点都储存一次，便于测试

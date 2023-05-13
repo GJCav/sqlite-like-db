@@ -1,6 +1,8 @@
 package db;
 
-public final class FieldDef {
+import java.lang.reflect.Field;
+
+public final class FieldDef implements Cloneable {
     public int len;
     public String name;
     public byte[] default_value;
@@ -45,5 +47,12 @@ public final class FieldDef {
         this.name = name;
         this.default_value = Bytes.from_int(default_value);
         this.type = Integer.class;
+    }
+
+    @Override
+    public Object clone() {
+        FieldDef obj = new FieldDef(this.len, this.name, this.default_value.clone());
+        obj.type = this.type;
+        return obj;
     }
 }

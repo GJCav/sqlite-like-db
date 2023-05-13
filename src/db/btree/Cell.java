@@ -1,5 +1,6 @@
-package db;
+package db.btree;
 
+import db.FieldDef;
 import db.exception.DBRuntimeError;
 
 import java.util.ArrayList;
@@ -38,4 +39,9 @@ public abstract class Cell {
     }
 
     public byte[] get_data() { return data; }
+
+    public static int get_cell_size(int[] key_types) {
+        int key_size = ObjType.get_size(key_types);
+        return 5 + key_size;
+    }
 }

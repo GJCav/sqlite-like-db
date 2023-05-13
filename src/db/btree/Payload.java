@@ -1,15 +1,17 @@
-package db;
+package db.btree;
 
+import db.Bytes;
 import db.exception.DBRuntimeError;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.ArrayList;
 
 /**
  * payload always stores data in memory
  */
-public class Payload {
+public class Payload implements Comparable<Payload> {
     private List<Integer> types = new ArrayList<>();
     private byte[] data = null;
 
@@ -105,6 +107,32 @@ public class Payload {
         }
     }
 
+    public static boolean is_compatible(List<Integer> types_a, List<Integer> types_b) {
+        boolean compatible = true;
+        if (types_a.size() != types_b.size()) compatible = false;
+        if (compatible) {
+            for (int i = 0; i < types_a.size(); i++) {
+                if (types_a.get(i) != types_b.get(i)) {
+                    if (ObjType.is_type_string(types_a.get(i)) && ObjType.is_type_string(types_b.get(i))) {
+                        // string type is compatible
+                        continue;
+                    }
+                    compatible = false;
+                    break;
+                }
+            }
+        }
+        return compatible;
+    }
+
+    public boolean is_compatible(Payload o) {
+        return is_compatible(types, o.types);
+    }
+
+    public List<Integer> get_types() {
+        return Collections.unmodifiableList(types);
+    }
+
     public int get_payload_size() {
         int sz = 0;
         for (int t : types) {
@@ -133,6 +161,52 @@ public class Payload {
         if (len < val.length()) throw new IllegalArgumentException("len must be greater than val.length()");
         int type = ObjType.STRING(len);
         return new ObjValue(type, val);
+    }
+
+    @Override
+    public int compareTo(Payload o) {
+        if (o == null) throw new NullPointerException("o must not be null");
+        // check compatibility
+
+        if (!is_compatible(o)) {
+            StringBuilder msg = new StringBuilder();
+            msg.append("can not compare 2 incompatible payloads, ");
+            msg.append("this = ").append(ObjType.to_string(types));
+            msg.append(", o = ").append(ObjType.to_string(o.types));
+            throw new IllegalArgumentException("can not compare 2 incompatible payloads.");
+        }
+
+        // compare
+        for (int i = 0; i < types.size(); i++) {
+            ObjValue v1 = get_obj(i);
+            ObjValue v2 = o.get_obj(i);
+            if (v1.type == ObjType.INT) {
+                int i1 = v1.as_int();
+                int i2 = v2.as_int();
+                if (i1 < i2) return -1;
+                if (i1 > i2) return 1;
+            } else if (v1.type == ObjType.LONG) {
+                long l1 = v1.as_long();
+                long l2 = v2.as_long();
+                if (l1 < l2) return -1;
+                if (l1 > l2) return 1;
+            } else if (v1.type == ObjType.FLOAT) {
+                float f1 = v1.as_float();
+                float f2 = v2.as_float();
+                if (f1 < f2) return -1;
+                if (f1 > f2) return 1;
+            } else if (ObjType.is_type_string(v1.type)) {
+                String s1 = v1.as_string();
+                String s2 = v2.as_string();
+                int cmp = s1.compareTo(s2);
+                if (cmp < 0) return -1;
+                if (cmp > 0) return 1;
+            } else {
+                throw new DBRuntimeError("unknown type " + ObjType.to_string(v1.type));
+            }
+        }
+
+        return 0;
     }
 
     public static final class ObjValue {

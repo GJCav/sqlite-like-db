@@ -126,4 +126,30 @@ public class Bytes {
     public static String to_string(byte[] arr) {
         return to_string(arr, 0, arr.length);
     }
+
+    public static byte[] from_ints(int[] vals) {
+        byte[] res = new byte[vals.length * 4];
+        for(int i = 0; i < vals.length; i++) {
+            System.arraycopy(from_int(vals[i]), 0, res, i * 4, 4);
+        }
+        return res;
+    }
+
+    public static int[] to_ints(byte[] arr, int offset, int int_len) {
+        if (arr.length < offset + int_len * 4) {
+            throw new IllegalArgumentException("array length is not enough");
+        }
+        int[] res = new int[int_len];
+        for(int i = 0; i < int_len; i++) {
+            res[i] = to_int(arr, offset + i * 4);
+        }
+        return res;
+    }
+
+    public static int[] to_ints(byte[] arr) {
+        if (arr.length % 4 != 0) {
+            throw new IllegalArgumentException("array length is not multiple of 4");
+        }
+        return to_ints(arr, 0, arr.length / 4);
+    }
 }

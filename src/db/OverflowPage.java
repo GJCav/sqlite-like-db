@@ -15,6 +15,13 @@ public class OverflowPage extends Page {
         headers = new Headers(HEADER_DEFS, page_id, owner);
     }
 
+    public static OverflowPage create(int page_id, DBFile owner) {
+        Headers headers = new Headers(HEADER_DEFS, page_id, owner);
+        headers.set_to_default();
+        OverflowPage page = new OverflowPage(page_id, owner);
+        return page;
+    }
+
     public void set_next(int next) {
         headers.set("next", next);
     }

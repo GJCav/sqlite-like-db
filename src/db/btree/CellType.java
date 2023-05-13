@@ -1,4 +1,4 @@
-package db;
+package db.btree;
 
 public final class CellType {
     public static final byte FREE = 0;

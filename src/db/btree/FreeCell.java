@@ -1,5 +1,6 @@
-package db;
+package db.btree;
 
+import db.Bytes;
 import db.exception.DBRuntimeError;
 
 public class FreeCell extends Cell {
