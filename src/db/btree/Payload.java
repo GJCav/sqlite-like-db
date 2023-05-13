@@ -26,6 +26,7 @@ public class Payload implements Comparable<Payload> {
         if (types == null) throw new NullPointerException("types must not be null");
         if (data == null) throw new NullPointerException("data must not be null");
         this.types = new ArrayList<>(types);
+        this.data = data;
     }
 
     public int get_obj_count() {
@@ -53,7 +54,7 @@ public class Payload implements Comparable<Payload> {
         int offset = get_obj_offset(idx);
         int size = get_obj_size(idx);
 
-        if (data.length <= offset + size)
+        if (data.length < offset + size)
             throw new DBRuntimeError("data too short");
 
         Object val = null;
@@ -84,7 +85,7 @@ public class Payload implements Comparable<Payload> {
         int offset = get_obj_offset(idx);
         int size = get_obj_size(idx);
 
-        if (data.length <= offset + size)
+        if (data.length < offset + size)
             throw new DBRuntimeError("data too short");
 
         if (type == ObjType.INT) {
@@ -145,6 +146,18 @@ public class Payload implements Comparable<Payload> {
         return data;
     }
 
+    @Override
+    public String toString() {
+        StringBuilder sbuf = new StringBuilder();
+        sbuf.append("(");
+        for (int i = 0; i < types.size(); i++) {
+            if (i > 0) sbuf.append(", ");
+            sbuf.append(get_obj(i).get_obj());
+        }
+        sbuf.append(")");
+        return sbuf.toString();
+    }
+
     public static ObjValue wrap_object(int val) {
         return new ObjValue(ObjType.INT, val);
     }
@@ -161,6 +174,20 @@ public class Payload implements Comparable<Payload> {
         if (len < val.length()) throw new IllegalArgumentException("len must be greater than val.length()");
         int type = ObjType.STRING(len);
         return new ObjValue(type, val);
+    }
+
+    public static Payload create(List<Integer> types, List<Object> objs) {
+        if (types == null) throw new NullPointerException("types must not be null");
+        if (objs == null) throw new NullPointerException("objs must not be null");
+        if (types.size() != objs.size()) throw new IllegalArgumentException("types.size() != objs.size()");
+
+        byte[] data = new byte[ObjType.get_size(types)];
+
+        Payload payload = new Payload(types, data);
+        for (int i = 0; i < objs.size(); i++) {
+            payload.set_obj(i, new ObjValue(types.get(i), objs.get(i)));
+        }
+        return payload;
     }
 
     @Override
@@ -216,6 +243,15 @@ public class Payload implements Comparable<Payload> {
         public ObjValue(int type, Object obj) {
             this.type = type;
             this.obj = obj;
+
+            if (obj.getClass() == String.class){
+                if (!ObjType.is_type_string(type))
+                    throw new DBRuntimeError("type mismatch, obj type is " + ObjType.to_string(type)
+                            + ", target type is " + ObjType.to_string(ObjType.STRING(0)));
+                if (((String) obj).length() > ObjType.string_len(type)) {
+                    throw new DBRuntimeError("string length is too long, max length is " + ObjType.string_len(type));
+                }
+            }
         }
 
         public int get_type() {

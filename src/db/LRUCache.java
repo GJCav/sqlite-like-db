@@ -31,6 +31,8 @@ public class LRUCache implements Cache {
     }
 
     private void write_back(Block block) {
+//        System.out.println("[LRUCache] write back page " + block.page_id);
+
         long file_offset = db.get_page_offset(block.page_id);
         try {
             db.ram.seek(file_offset);
@@ -83,6 +85,8 @@ public class LRUCache implements Cache {
     private Block get_block(int page_id) {
         if (page_id < 0) throw new IllegalArgumentException("page_id must be positive");
         if (blocks.containsKey(page_id)) {
+//            System.out.println("[LRUCache] hit cache page " + page_id);
+
             Block block = blocks.get(page_id);
             used_blocks.remove(block);
             used_blocks.add_front(block);
@@ -96,6 +100,8 @@ public class LRUCache implements Cache {
 
     @Override
     public byte[] read(int page_id, int pos, int length) {
+//        System.out.println("[LRUCache] read page " + page_id + ", pos = " + pos + ", length = " + length);
+
         Block block = get_block(page_id);
         byte[] data = new byte[length];
         System.arraycopy(block.data, pos, data, 0, length);
@@ -104,6 +110,8 @@ public class LRUCache implements Cache {
 
     @Override
     public void write(int page_id, int pos, byte[] data, int offset, int length) {
+//        System.out.println("[LRUCache] write page " + page_id + ", pos = " + pos + ", length = " + length);
+
         Block block = get_block(page_id);
         if (block.data.length < pos + length)
             throw new IllegalArgumentException("write out of block bound");

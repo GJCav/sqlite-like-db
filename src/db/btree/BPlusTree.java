@@ -17,8 +17,25 @@ public class BPlusTree {
         this.root = new BTreeNode(root_page, db);
     }
 
-    public static BPlusTree create(int page_id, DBFile db, int[] key_types, int[] val_types) {
-        BLeafNode.create(page_id, db, key_types, val_types);
+    public static BPlusTree create(int page_id, DBFile db, List<Integer> key_types, List<Integer> val_types) {
+        if (page_id == 0) throw new IllegalArgumentException("page_id must not be 0");
+        if (key_types == null) throw new NullPointerException("key_types must not be null");
+        if (val_types == null) throw new NullPointerException("val_types must not be null");
+
+        int[] key_types_arr = new int[key_types.size()];
+        for (int i = 0; i < key_types.size(); i++) {
+            key_types_arr[i] = key_types.get(i);
+        }
+        int[] val_types_arr = new int[val_types.size()];
+        for (int i = 0; i < val_types.size(); i++) {
+            val_types_arr[i] = val_types.get(i);
+        }
+        BLeafNode.create(
+                page_id,
+                db,
+                key_types_arr,
+                val_types_arr
+        );
         return new BPlusTree(page_id, db);
     }
 
@@ -53,7 +70,7 @@ public class BPlusTree {
                 List<Payload> keys = interior.get_keys();
                 int idx = Collections.binarySearch(keys, key);
                 if (idx < 0) {
-                    idx = -idx - 1;
+                    idx = -(idx+1);
                 }
                 int child_page = interior.get_child(idx);
                 cur = new BTreeNode(child_page, db);
@@ -120,5 +137,14 @@ public class BPlusTree {
         if (dr.root_page_id != 0) {
             root = new BTreeNode(dr.root_page_id, db);
         }
+    }
+
+    public BLeafNode leftmost_leaf() {
+        BTreeNode cur = root;
+        while (cur.get_page_type() == PageType.BTREE_INTERIOR) {
+            BInteriorNode interior = new BInteriorNode(cur.get_page_id(), db);
+            cur = new BTreeNode(interior.get_child(0), db);
+        }
+        return new BLeafNode(cur.get_page_id(), db);
     }
 }

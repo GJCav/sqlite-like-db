@@ -72,7 +72,7 @@ public class OverflowPage extends Page {
      */
     public OutputStream get_output_stream(long pos) {
         if (pos < 0) {
-            throw new IllegalArgumentException("pos must be >= 0");
+            throw new IllegalArgumentException("pos must be >= 0, got " + pos);
         }
 
         int available_size = get_available_size();

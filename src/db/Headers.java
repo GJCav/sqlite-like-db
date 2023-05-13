@@ -1,6 +1,7 @@
 package db;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
@@ -138,6 +139,10 @@ public class Headers {
         Class type;
 
         public FieldValue(byte[] value, Class type) {
+            if (type == null) {
+                throw new IllegalArgumentException("type cannot be null");
+            }
+
             this.value = value;
             this.type = type;
         }
@@ -162,13 +167,18 @@ public class Headers {
                 return to_string();
             } else if(type == byte[].class) {
                 return to_bytes();
-            } else {
+            } else if (type == int[].class) {
+                return to_ints();
+            }else {
                 throw new RuntimeException("Unknown type: " + type);
             }
         }
 
         @Override
         public String toString() {
+            if (type == int[].class) {
+                return Arrays.toString(to_ints());
+            }
             return Objects.toString(to_object());
         }
 

@@ -2,6 +2,7 @@ package db.btree;
 
 import db.Bytes;
 import db.FieldDef;
+import db.Headers;
 import db.exception.DBRuntimeError;
 
 import java.util.ArrayList;
@@ -10,7 +11,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class InteriorCell extends Cell {
-    public static final List<FieldDef> HEADERS = new ArrayList() {{
+    public static final List<FieldDef> HEADER_DEFS = new ArrayList() {{
         add(new FieldDef(1, "type", CellType.INTERIOR));
         add(new FieldDef(4, "child_page", 0));
     }};
@@ -21,7 +22,7 @@ public class InteriorCell extends Cell {
         super(cell_id, data);
         if (payload_types == null) throw new NullPointerException("payload_types must not be null");
 
-        header_defs = HEADERS;
+        header_defs = HEADER_DEFS;
         this.payload_types = payload_types;
 
         int exp_size = get_header_size() + ObjType.get_size(payload_types);
@@ -34,7 +35,7 @@ public class InteriorCell extends Cell {
         super(cell_id, data);
         if (payload_types == null) throw new NullPointerException("payload_types must not be null");
 
-        header_defs = HEADERS;
+        header_defs = HEADER_DEFS;
         this.payload_types = Arrays.stream(payload_types).boxed().collect(Collectors.toList());
 
         int exp_size = get_header_size() + ObjType.get_size(payload_types);
@@ -50,7 +51,11 @@ public class InteriorCell extends Cell {
     }
 
     public static InteriorCell create(int cell_id, int[] payload_types) {
-        return create(cell_id, new byte[ObjType.get_size(payload_types)], payload_types);
+        return create(
+                cell_id,
+                new byte[Headers.get_total_length(HEADER_DEFS) + ObjType.get_size(payload_types)],
+                payload_types
+        );
     }
 
     public int get_child() {

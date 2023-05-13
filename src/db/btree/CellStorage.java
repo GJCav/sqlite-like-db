@@ -33,6 +33,8 @@ public class CellStorage {
     }
 
     public static CellStorage create(OverflowPage page, int[] value_types) {
+        System.out.println("[CellStorage] create cell storage on page " + page.get_page_id());
+
         if (page == null) {
             throw new NullPointerException("page is null");
         }
@@ -46,7 +48,7 @@ public class CellStorage {
         defs.add(new FieldDef(4, "unit_count", 0));
         defs.add(new FieldDef(4, "free_unit", -1));
         defs.add(new FieldDef(4, "value_count", value_types.length));
-        defs.add(new FieldDef(4 * value_types.length, "value_types", Bytes.from_ints(value_types)));
+        defs.add(new FieldDef(4 * value_types.length, "value_types", value_types));
 
         Headers hdr = new Headers(defs, page.get_page_id(), page.get_owner());
         for (int i = start;i < defs.size();i++) {
@@ -54,7 +56,10 @@ public class CellStorage {
             hdr.set(d.name, d.default_value);
         }
 
-        return new CellStorage(page);
+        CellStorage storage = new CellStorage(page);
+        storage.headers = hdr;
+
+        return storage;
     }
 
     private void construct_headers() {
@@ -63,7 +68,7 @@ public class CellStorage {
         Headers partial = new Headers(defs, page.get_page_id(), page.get_owner());
         int value_count = partial.get("value_count").to_int();
 
-        defs.add(new FieldDef(4 * value_count, "value_types", new byte[value_count * 4]));
+        defs.add(new FieldDef(4 * value_count, "value_types", new int[value_count]));
 
         headers = new Headers(defs, page.get_page_id(), page.get_owner());
     }
@@ -111,12 +116,13 @@ public class CellStorage {
     ///////////////////////////////////////////////////////////
 
     /**
-     * offset relative to OverflowPage
+     * pos in OverflowPage InputStream/OutputStream
      * @return
      */
-    private long get_unit_offset(int cell_id) {
+    private long get_unit_pos(int cell_id) {
         int unit_size = headers.get("unit_size").to_int();
-        long offset = -page.get_page_header_size() + unit_size * cell_id;
+        long offset = headers.get_total_length() - Headers.get_total_length(OverflowPage.HEADER_DEFS)
+                + unit_size * cell_id;
         return offset;
     }
 
@@ -126,7 +132,7 @@ public class CellStorage {
      * @return
      */
     public OverflowPage.OutputStream get_unit_out_stream(int unit_id) {
-        long offset = get_unit_offset(unit_id);
+        long offset = get_unit_pos(unit_id);
         return page.get_output_stream(offset);
     }
 
@@ -136,7 +142,7 @@ public class CellStorage {
      * @return
      */
     public OverflowPage.InputStream get_unit_in_stream(int unit_id) {
-        long offset = get_unit_offset(unit_id);
+        long offset = get_unit_pos(unit_id);
         return page.get_input_stream(offset);
     }
 
@@ -154,6 +160,7 @@ public class CellStorage {
     public void set_unit(int unit_id, Payload payload) {
         List<Integer> value_types = get_value_type_list();
         if (!Payload.is_compatible(value_types, payload.get_types())) {
+
             throw new DBRuntimeError("Payload is not compatible with this CellStorage, " +
                     "expected " + ObjType.to_string(value_types) +
                     ", got " + ObjType.to_string(payload.get_types()));
@@ -198,5 +205,13 @@ public class CellStorage {
 
     public List<Integer> get_value_type_list() {
         return Arrays.stream(get_value_types()).boxed().collect(Collectors.toList());
+    }
+
+    public void _print_headers() {
+        System.out.println("Storage at overflow page " + page.get_page_id());
+
+        for (FieldDef d : headers.field_defs) {
+            System.out.println(d.name + ": " + headers.get(d.name));
+        }
     }
 }

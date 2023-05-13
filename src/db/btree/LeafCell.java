@@ -2,6 +2,7 @@ package db.btree;
 
 import db.Bytes;
 import db.FieldDef;
+import db.Headers;
 import db.exception.DBRuntimeError;
 
 import java.util.ArrayList;
@@ -56,7 +57,11 @@ public class LeafCell extends Cell {
     }
 
     public static LeafCell create(int cell_id, int[] key_types) {
-        return create(cell_id, new byte[ObjType.get_size(key_types)], key_types);
+        return create(
+                cell_id,
+                new byte[Headers.get_total_length(HEADERS) + ObjType.get_size(key_types)],
+                key_types
+        );
     }
 
 

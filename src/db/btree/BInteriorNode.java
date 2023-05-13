@@ -32,7 +32,7 @@ public class BInteriorNode extends BTreeNode {
     public BInteriorNode(int page_id, DBFile owner) {
         super(page_id, owner);
         construct_headers(BASIC_HDR_DEFS);
-        if (get_page_type() != PageType.BTREE_LEAF) {
+        if (get_page_type() != PageType.BTREE_INTERIOR) {
             throw new DBRuntimeError("page type mismatch, " +
                     "expect " + PageType.to_string(PageType.BTREE_LEAF)
                     + ", got " + PageType.to_string(get_page_type()));
@@ -51,7 +51,7 @@ public class BInteriorNode extends BTreeNode {
     ////////////////////////////////////////////////////////////
     protected InteriorCell get_slot_cell(int slot_id) {
         if (slot_id < 0 || slot_id >= get_slot_count()) {
-            throw new RuntimeException("slot_id out of range");
+            throw new RuntimeException("slot_id out of range, got " + slot_id + ", expect [0, " + get_slot_count() + ")");
         }
         int cell_id = get_slot(slot_id);
         byte[] data = read_cell_data(cell_id);
@@ -63,7 +63,7 @@ public class BInteriorNode extends BTreeNode {
             throw new DBRuntimeError("no more slot available");
         }
 
-        List<Integer> slots = get_slot_list();
+        List<Integer> slots = get_slots();
         slots.add(slot_id, cell.cell_id);
         set_slots(slots);
 
@@ -135,8 +135,16 @@ public class BInteriorNode extends BTreeNode {
     public void set_key(int slot_id, Payload key) {
         int slot_count = get_slot_count();
 
-        if (slot_id < 0 || slot_id >= slot_count) {
-            throw new IndexOutOfBoundsException("slot_id out of range");
+        if (slot_id < 0 || slot_id > slot_count) {
+            throw new IndexOutOfBoundsException("slot_id out of range, slot_id=" + slot_count);
+        }
+
+        if (slot_id == slot_count) {
+            int cell_id = allocate_cell();
+            InteriorCell cell = InteriorCell.create(cell_id, get_key_types());
+            cell.set_key(key);
+            add_slot_cell(slot_id, cell);
+            return;
         }
 
         int cell_id = get_slot(slot_id);
@@ -158,13 +166,19 @@ public class BInteriorNode extends BTreeNode {
 
     public List<Payload> get_keys() {
         List<Payload> keys = new ArrayList<>();
-        int[] cell_ids = get_slot_array();
+        List<Integer> cell_ids = get_slots();
         for (int cell_id : cell_ids) {
             InteriorCell cell = get_slot_cell(cell_id);
             keys.add(cell.get_key());
         }
         return keys;
     }
+
+
+    //////////////////////////////////////////////////
+    // getters & setters
+    //////////////////////////////////////////////////
+
 
 
     //////////////////////////////////////////////////
@@ -189,8 +203,8 @@ public class BInteriorNode extends BTreeNode {
         add_slot_cell(idx, cell);
         set_child(idx, pseudo.left.get_page_id());
         set_child(idx+1, pseudo.right.get_page_id());
-        pseudo.left.set_father(this.get_father());
-        pseudo.right.set_father(this.get_father());
+        pseudo.left.set_father(this.page_id);
+        pseudo.right.set_father(this.page_id);
 
         int total = get_total();
         total += pseudo.left.get_total();

@@ -8,10 +8,18 @@ public final class FieldDef implements Cloneable {
     public byte[] default_value;
     public Class type;
 
-    public FieldDef(int len, String name, byte[] default_value) {
+    public FieldDef(int len, String name, Class type, byte[] default_value) {
         this.len = len;
         this.name = name;
         this.default_value = default_value;
+        this.type = type;
+    }
+
+    public FieldDef(int len, String name, int[] default_value) {
+        this.len = len;
+        this.name = name;
+        this.default_value = Bytes.from_ints(default_value);
+        this.type = int[].class;
     }
 
     public FieldDef(int len, String name, String default_value) {
@@ -51,8 +59,7 @@ public final class FieldDef implements Cloneable {
 
     @Override
     public Object clone() {
-        FieldDef obj = new FieldDef(this.len, this.name, this.default_value.clone());
-        obj.type = this.type;
+        FieldDef obj = new FieldDef(this.len, this.name, this.type, this.default_value.clone());
         return obj;
     }
 }

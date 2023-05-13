@@ -66,7 +66,7 @@ public class BLeafNode extends BTreeNode {
             throw new DBRuntimeError("no more slot available");
         }
 
-        List<Integer> slots = get_slot_list();
+        List<Integer> slots = get_slots();
         slots.add(slot_id, cell.cell_id);
         set_slots(slots);
 
@@ -92,12 +92,16 @@ public class BLeafNode extends BTreeNode {
     public int get_overflow_page() {
         return headers.get("overflow_page").to_int();
     }
+    private void set_overflow_page(int page_id) {
+        headers.set("overflow_page", page_id);
+    }
 
     private void setup_overflow() {
         int overflow_page_id = get_overflow_page();
         if (overflow_page_id == 0) {
             overflow_page_id = owner.alloc_page();
             OverflowPage overflow_page = OverflowPage.create(overflow_page_id, owner);
+            set_overflow_page(overflow_page_id);
             storage = CellStorage.create(overflow_page, get_value_types());
         } else {
             OverflowPage overflow_page = new OverflowPage(overflow_page_id, owner);
@@ -110,6 +114,8 @@ public class BLeafNode extends BTreeNode {
             }
         }
     }
+
+
 
     public void set_key(int slot_id, Payload key) {
         int slot_count = get_slot_count();
@@ -135,7 +141,7 @@ public class BLeafNode extends BTreeNode {
 
     public List<Payload> get_keys() {
         List<Payload> keys = new ArrayList<>();
-        int[] cell_ids = get_slot_array();
+        List<Integer> cell_ids = get_slots();
         for (int cell_id : cell_ids) {
             LeafCell cell = get_slot_cell(cell_id);
             keys.add(cell.get_key());
@@ -191,7 +197,7 @@ public class BLeafNode extends BTreeNode {
                 throw new DBRuntimeError("no more slot available");
             }
 
-            idx = -(idx-1);
+            idx = -(idx+1);
             int cell_id = allocate_cell();
             LeafCell cell = LeafCell.create(cell_id, get_key_types());
             cell.set_key(key);

@@ -1,5 +1,6 @@
 package db.btree;
 
+import java.util.HashMap;
 import java.util.List;
 
 public final class ObjType {
@@ -81,5 +82,18 @@ public final class ObjType {
     public static int STRING(int len) {
         if (len < 0) throw new IllegalArgumentException("len must be greater than 0");
         return 16 + len;
+    }
+
+    public static HashMap<Class, Integer> class_to_type = new HashMap(){{
+        put(Integer.class, ObjType.INT);
+        put(Long.class, ObjType.LONG);
+        put(Float.class, ObjType.FLOAT);
+        put(Double.class, ObjType.DOUBLE);
+        put(String.class, ObjType.STRING(255));
+    }};
+
+    public static int string_len(int type) {
+        if (!is_type_string(type)) throw new IllegalArgumentException("type must be string");
+        return type - 16;
     }
 }

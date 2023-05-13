@@ -61,10 +61,8 @@ public class BTreeNode extends Page {
             }
         }
 
-        byte[] key_types_data = Bytes.from_ints(key_types);
-        defs.add(new FieldDef(key_types.length * 4, "key_types", key_types_data));
-        byte[] val_types_data = Bytes.from_ints(val_types);
-        defs.add(new FieldDef(val_types.length * 4, "value_types", val_types_data));
+        defs.add(new FieldDef(key_types.length * 4, "key_types", key_types));
+        defs.add(new FieldDef(val_types.length * 4, "value_types", val_types));
 
         int partial_hdr_size = Headers.get_total_length(defs) + 8; // slot_capacity, slot_count
         // partial_hdr_size + n * 4 + n * cell_size <= page_size
@@ -79,9 +77,9 @@ public class BTreeNode extends Page {
         int hdr_size = partial_hdr_size + slot_capacity * 4;
         hdr_size_def.default_value = Bytes.from_int(hdr_size);
 
-        defs.add(new FieldDef(4, "slot_capacity", Bytes.from_int(slot_capacity)));
-        defs.add(new FieldDef(4, "slot_count", Bytes.from_int(0)));
-        defs.add(new FieldDef(slot_capacity * 4, "slots", new byte[slot_capacity * 4]));
+        defs.add(new FieldDef(4, "slot_capacity", slot_capacity));
+        defs.add(new FieldDef(4, "slot_count", 0));
+        defs.add(new FieldDef(slot_capacity * 4, "slots", new int[slot_capacity]));
 
         Headers hdr = new Headers(defs, page_id, owner);
         hdr.set_to_default();
@@ -94,9 +92,17 @@ public class BTreeNode extends Page {
 
         List<FieldDef> defs = new ArrayList<>(basic_defs);
         int key_count = basic_hdr.get("key_count").to_int();
-        defs.add(new FieldDef(key_count * 4, "key_types", new byte[key_count * 4]));
         int value_count = basic_hdr.get("value_count").to_int();
-        defs.add(new FieldDef(value_count * 4, "value_types", new byte[value_count * 4]));
+
+        defs.add(new FieldDef(key_count * 4, "key_types", new int[key_count]));
+        defs.add(new FieldDef(value_count * 4, "value_types", new int[value_count]));
+        defs.add(new FieldDef(4, "slot_capacity", 0));
+        defs.add(new FieldDef(4, "slot_count", 0));
+
+        Headers partial_hdr = new Headers(defs, page_id, owner);
+        int slot_capacity = partial_hdr.get("slot_capacity").to_int();
+
+        defs.add(new FieldDef(slot_capacity * 4, "slots", new int[slot_capacity]));
 
         this.headers = new Headers(defs, page_id, owner);
     }
@@ -235,6 +241,26 @@ public class BTreeNode extends Page {
     // getters
     ////////////////////////////////////////////////////////////
 
+    public int get_total() {
+        if (get_page_type() == PageType.BTREE_INTERIOR) {
+            return headers.get("total").to_int();
+        } else if (get_page_type() == PageType.BTREE_LEAF) {
+            return get_slot_count();
+        } else {
+            throw new DBRuntimeError("page type " + get_page_type() + " do not supported get_total");
+        }
+    }
+
+    public void set_total(int total) {
+        if (get_page_type() == PageType.BTREE_INTERIOR) {
+            headers.set("total", total);
+        } else if (get_page_type() == PageType.BTREE_LEAF) {
+            return; // do nothing
+        } else {
+            throw new DBRuntimeError("page type " + get_page_type() + " do not supported set_total");
+        }
+    }
+
     public int get_key_count() {
         return headers.get("key_count").to_int();
     }
@@ -315,28 +341,5 @@ public class BTreeNode extends Page {
 
     public int get_father() {
         return headers.get("father").to_int();
-    }
-
-    public void set_total(int total) {
-        headers.set("total", total);
-    }
-
-    public int get_total() {
-        return headers.get("total").to_int();
-    }
-
-    public int[] get_slot_array() {
-        return headers.get("slots").to_ints();
-    }
-
-    public List<Integer> get_slot_list() {
-        List<Integer> list = new ArrayList<>();
-        int[] slots = get_slot_array();
-        for (int i = 0; i < slots.length; i++) {
-            if (slots[i] != 0) {
-                list.add(slots[i]);
-            }
-        }
-        return list;
     }
 }
