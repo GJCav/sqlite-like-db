@@ -6,6 +6,11 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Least Recently Used Cache for DBFile
+ *
+ * @see Cache
+ */
 public class LRUCache implements Cache {
     private DBFile db;
     private int max_cache_size = 100;

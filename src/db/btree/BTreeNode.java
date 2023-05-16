@@ -309,7 +309,7 @@ public class BTreeNode extends Page {
 
     public int[] get_key_types() {
         int key_count = get_key_count();
-        byte[] data = headers.get("key_types").to_bytes();
+        byte[] data = headers.get("key_types").as_bytes();
         if (data.length != key_count * 4) {
             throw new DBRuntimeError("incomplete key_types field, expect "
                     + key_count * 4 + " bytes, got " + data.length);
@@ -333,7 +333,7 @@ public class BTreeNode extends Page {
 
     public int[] get_value_types() {
         int value_count = get_value_count();
-        byte[] data = headers.get("value_types").to_bytes();
+        byte[] data = headers.get("value_types").as_bytes();
         if (data.length != value_count * 4) {
             throw new DBRuntimeError("incomplete value_types field, expect "
                     + value_count * 4 + " bytes, got " + data.length);
@@ -372,10 +372,6 @@ public class BTreeNode extends Page {
         return headers.get("hdr_size").to_int();
     }
 
-    @Override
-    public void init_page() {
-        throw new RuntimeException("not supported");
-    }
 
     public void set_father(int page_id) {
         headers.set("father", page_id);

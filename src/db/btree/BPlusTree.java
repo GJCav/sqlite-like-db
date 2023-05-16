@@ -93,6 +93,25 @@ public class BPlusTree {
         return r;
     }
 
+    public Payload get_value(SearchResult sr){
+        if (!sr.found()) throw new IllegalArgumentException("key not found");
+        BLeafNode leaf = new BLeafNode(
+                sr.path.get(sr.path.size() - 1).get_page_id(),
+                db
+        );
+        Payload payload = leaf.get_value(sr.idx);
+        return payload;
+    }
+
+    public void set_value(SearchResult sr, Payload val) {
+        if (!sr.found()) throw new IllegalArgumentException("key not found");
+        BLeafNode leaf = new BLeafNode(
+                sr.path.get(sr.path.size()-1).get_page_id(),
+                db
+        );
+        leaf.set_value(sr.idx, val);
+    }
+
     public void insert(Payload key, Payload value) {
         check_key_types(key);
         check_val_types(value);
@@ -149,6 +168,14 @@ public class BPlusTree {
         }
         return new BLeafNode(cur.get_page_id(), db);
     }
+
+    public int root_page() {
+        return root.get_page_id();
+    }
+
+    ////////////////////////////////////////////////////////////
+    // for debug
+    ////////////////////////////////////////////////////////////
 
     public void _print_tree() {
         Queue<Integer> q = new LinkedList<>();
@@ -258,7 +285,4 @@ public class BPlusTree {
         _check_total(root);
     }
 
-    public int root_page() {
-        return root.get_page_id();
-    }
 }

@@ -4,6 +4,15 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
+/**
+ * Overflow page.
+ *
+ * Overflow pages are connected to form a page link, note as overflow chain. A database file can have multiple
+ * overflow chain. The page contents of each page of an overflow chain is logically viewed as a continuous storage
+ * space, though in the database file, they are separated in discrete location.
+ *
+ * Use {@link InputStream} and {@link  OutputStream} to read and write on the page.
+ */
 public class OverflowPage extends Page {
     public static final List<FieldDef> HEADER_DEFS = Arrays.asList(
             new FieldDef(1, "type", PageType.OVERFLOW),
@@ -82,8 +91,7 @@ public class OverflowPage extends Page {
             int next_page_id = page.get_next();
             if (next_page_id == 0) {
                 next_page_id = owner.alloc_page();
-                OverflowPage new_page = new OverflowPage(next_page_id, owner);
-                new_page.init_page();
+                OverflowPage.create(next_page_id, owner);
             }
             page = new OverflowPage(next_page_id, page.owner);
         }
@@ -121,8 +129,7 @@ public class OverflowPage extends Page {
                 if(current_page.get_next() == 0) {
                     int new_page_id = root_page.owner.alloc_page();
                     current_page.set_next(new_page_id);
-                    OverflowPage new_page = new OverflowPage(new_page_id, root_page.owner);
-                    new_page.init_page();
+                    OverflowPage.create(new_page_id, root_page.owner);
                 }
                 int next_page_id = current_page.get_next();
                 current_page = new OverflowPage(next_page_id, root_page.owner);

@@ -26,8 +26,7 @@ public class TestOverflowPage {
 
             // 1st page is overflow page
             int page_id = db.alloc_page();
-            OverflowPage page = new OverflowPage(page_id, db);
-            page.init_page();
+            OverflowPage page = OverflowPage.create(page_id, db);
 
             // make some space
             db.alloc_page(); // 2ed page is null page

@@ -1,5 +1,9 @@
 package db.exception;
 
+/**
+ * the program encountered some unrecoverable error at runtime.
+ * the database file is possibly corrupted, or there are bugs in code.
+ */
 public class DBRuntimeError extends RuntimeException {
     public DBRuntimeError() {
     }

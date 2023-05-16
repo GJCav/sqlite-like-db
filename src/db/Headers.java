@@ -1,10 +1,14 @@
 package db;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
+/**
+ * A quick and dirty wrapper to read and write fields in a page.
+ *
+ * @see FieldDef
+ */
 public class Headers {
     public List<FieldDef> field_defs;
     public int page_id;
@@ -77,7 +81,7 @@ public class Headers {
     //////////////////////////////////////
 
     public void set(String name, FieldValue value) {
-        set(name, value.to_bytes());
+        set(name, value.as_bytes());
     }
 
     public void set(String name, byte val) {
@@ -134,6 +138,9 @@ public class Headers {
     // FieldValue
     //////////////////////////////////////
 
+    /**
+     * A readonly wrapper to store a field value and its type.
+     */
     public static final class FieldValue {
         byte[] value;
         Class type;
@@ -147,39 +154,39 @@ public class Headers {
             this.type = type;
         }
 
-        public long to_long(){ return Bytes.to_long(this.value); }
+        public long as_long(){ return Bytes.to_long(this.value); }
         public int to_int(){ return Bytes.to_int(this.value); }
-        public short to_short(){ return Bytes.to_short(this.value); }
-        public byte to_byte(){ return Bytes.to_byte(this.value); }
-        public String to_string(){ return Bytes.to_string(this.value); }
-        public byte[] to_bytes(){ return this.value; }
+        public short as_short(){ return Bytes.to_short(this.value); }
+        public byte as_byte(){ return Bytes.to_byte(this.value); }
+        public String as_string(){ return Bytes.to_string(this.value); }
+        public byte[] as_bytes(){ return this.value; }
 
-        public Object to_object() {
+        public Object as_object() {
             if(type == Long.class) {
-                return to_long();
+                return as_long();
             } else if(type == Integer.class) {
                 return to_int();
             } else if(type == Short.class) {
-                return to_short();
+                return as_short();
             } else if(type == Byte.class) {
-                return to_byte();
+                return as_byte();
             } else if(type == String.class) {
-                return to_string();
+                return as_string();
             } else if(type == byte[].class) {
-                return to_bytes();
+                return as_bytes();
             } else if (type == int[].class) {
                 return to_ints();
             }else {
                 throw new RuntimeException("Unknown type: " + type);
             }
         }
-
+        
         @Override
         public String toString() {
             if (type == int[].class) {
                 return Arrays.toString(to_ints());
             }
-            return Objects.toString(to_object());
+            return Objects.toString(as_object());
         }
 
         public int[] to_ints() {

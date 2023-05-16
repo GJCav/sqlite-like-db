@@ -3,8 +3,6 @@ package test;
 import db.*;
 import db.exception.DBRuntimeError;
 
-import java.io.IOException;
-
 public class DumpDB {
     public static void main(String[] argv) {
         try {
@@ -32,7 +30,7 @@ public class DumpDB {
             StringBuilder info = new StringBuilder();
             info.append("- ").append(def.name).append(": ");
             try {
-                String val = headers.get(def.name).to_object().toString();
+                String val = headers.get(def.name).as_object().toString();
                 if (def.name == "page_size") {
                     int m = Integer.parseInt(val);
                     val = String.format("%d (%d bytes)", m, 1<<m);
@@ -63,7 +61,7 @@ public class DumpDB {
             try {
                 Headers headers = page.get_headers();
                 int next_free = headers.get("next_free").to_int();
-                int type = headers.get("type").to_byte();
+                int type = headers.get("type").as_byte();
                 sbuf.append(String.format("type=%d, next_free=%d, ", type, next_free));
                 int offset = headers.get_total_length();
                 byte[] buf = db.read(free_page, offset, offset+32);
@@ -93,7 +91,7 @@ public class DumpDB {
         Page page = new Page(page_id, db);
         int type = -1;
         try {
-            type = page.get_headers().get("type").to_byte();
+            type = page.get_headers().get("type").as_byte();
         } catch (DBRuntimeError e) {
             sbuf.append("ERROR, " + e.getMessage());
         }

@@ -104,8 +104,16 @@ public class Bytes {
         return to_double(arr, 0);
     }
 
+    /**
+     * NOTES: the string is null-terminated.
+     * @param str
+     * @return
+     */
     public static byte[] from_string(String str) {
-        return str.getBytes(StandardCharsets.UTF_8);
+        byte[] data = str.getBytes(StandardCharsets.UTF_8);
+        byte[] res = new byte[data.length + 1];
+        System.arraycopy(data, 0, res, 0, data.length);
+        return data;
     }
 
     /**
@@ -123,6 +131,11 @@ public class Bytes {
         return new String(arr, offset, l, StandardCharsets.UTF_8);
     }
 
+    /**
+     * @see Bytes#to_string(byte[], int, int)
+     * @param arr
+     * @return
+     */
     public static String to_string(byte[] arr) {
         return to_string(arr, 0, arr.length);
     }

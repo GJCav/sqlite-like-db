@@ -5,6 +5,12 @@ import db.exception.DBRuntimeError;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 
+/**
+ * no-cache cache policy, directly read and write on file.
+ *
+ * RandomAccessFile has some wierd behavior, preferring LRUCache.
+ * @see LRUCache
+ */
 public class NoCache implements Cache {
     private DBFile db;
 

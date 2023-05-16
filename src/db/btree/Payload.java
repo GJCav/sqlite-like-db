@@ -9,7 +9,9 @@ import java.util.List;
 import java.util.ArrayList;
 
 /**
- * payload always stores data in memory
+ * Payload models the columns in a table. A payload is either a key or a value in b-tree.
+ *
+ * Payload always stores data in memory.
  */
 public class Payload implements Comparable<Payload> {
     private List<Integer> types = new ArrayList<>();
@@ -19,7 +21,7 @@ public class Payload implements Comparable<Payload> {
     /**
      * make sure no other object can modify the data
      *
-     * @param types
+     * @param types, {@link ObjType}
      * @param data
      */
     public Payload(List<Integer> types, byte[] data) {
@@ -115,7 +117,7 @@ public class Payload implements Comparable<Payload> {
             for (int i = 0; i < types_a.size(); i++) {
                 if (types_a.get(i) != types_b.get(i)) {
                     if (ObjType.is_type_string(types_a.get(i)) && ObjType.is_type_string(types_b.get(i))) {
-                        // string type is compatible
+                        // string type with different lens is compatible
                         continue;
                     }
                     compatible = false;

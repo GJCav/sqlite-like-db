@@ -117,7 +117,7 @@ public class BLeafNode extends BTreeNode {
 
 
 
-    public void set_key(int slot_id, Payload key) {
+    protected void set_key(int slot_id, Payload key) {
         int slot_count = get_slot_count();
         if (slot_id < 0 || slot_id >= slot_count) {
             throw new IndexOutOfBoundsException("slot_id out of range, got " + slot_id);
@@ -222,7 +222,7 @@ public class BLeafNode extends BTreeNode {
         }
     }
 
-    public SplitResult split() {
+    protected SplitResult split() {
         int root_page_id = 0;
         int fth = get_father();
         if(fth != 0) {

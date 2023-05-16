@@ -107,7 +107,7 @@ public class BInteriorNode extends BTreeNode {
         return headers.get("tail_child").to_int();
     }
 
-    public void set_tail_child(int page_id) {
+    protected void set_tail_child(int page_id) {
         headers.set("tail_child", page_id);
     }
 
@@ -115,7 +115,7 @@ public class BInteriorNode extends BTreeNode {
      * @param slot_id, if slot_id = slot_count, set the tail child
      * @param page_id
      */
-    public void set_child(int slot_id, int page_id) {
+    protected void set_child(int slot_id, int page_id) {
         int slot_count = get_slot_count();
 
         if (slot_id < 0 || slot_id > slot_count) {
@@ -153,7 +153,7 @@ public class BInteriorNode extends BTreeNode {
      * @param slot_id
      * @param key
      */
-    public void set_key(int slot_id, Payload key) {
+    protected void set_key(int slot_id, Payload key) {
         int slot_count = get_slot_count();
 
         if (slot_id < 0 || slot_id > slot_count) {
@@ -239,7 +239,7 @@ public class BInteriorNode extends BTreeNode {
         set_total(total);
     }
 
-    public SplitResult split() {
+    protected SplitResult split() {
         int root_page = 0;
         int father_page = get_father();
         if (father_page != 0) {
@@ -306,7 +306,7 @@ public class BInteriorNode extends BTreeNode {
         return r;
     }
 
-    public int get_heir_idx(int page_id) {
+    protected int get_heir_idx(int page_id) {
         int slot_count = get_slot_count();
         for (int i = 0; i <= slot_count; i++) {
             int child_id = get_child(i);
@@ -317,7 +317,7 @@ public class BInteriorNode extends BTreeNode {
         throw new DBRuntimeError("page_id not found");
     }
 
-    public DeleteResult delete_self() {
+    protected DeleteResult delete_self() {
         if (get_slot_count() > 0) {
             throw new DBRuntimeError("can't delete non-empty node");
         }
