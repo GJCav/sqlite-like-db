@@ -1,5 +1,7 @@
 package db;
 
+import db.btree.BPlusTree;
+import db.btree.ObjType;
 import db.exception.DBRuntimeError;
 
 import java.io.Closeable;
@@ -10,14 +12,16 @@ import java.util.List;
 
 public class DBFile implements Closeable {
     public static final int HEADER_SIZE = 128;
+    public static final int TABLE_NAME_LEN = 64;
     public static final List<FieldDef> HEADER_DEFS = Arrays.asList(
             new FieldDef(32, "file_id", "SQLite-like-db"),
             new FieldDef(2, "ver", (short) 1),
-            new FieldDef(1, "page_size", (byte) 7), // 128 byte page size, for debugging
+            new FieldDef(1, "page_size", (byte) 9), // 512 byte page size, for debugging
             new FieldDef(4, "page_count", 1),
             new FieldDef(4, "freelist_head", 0),
             new FieldDef(4, "freelist_count", 0),
-            new FieldDef(4, "cache_count", 4096)
+            new FieldDef(4, "cache_count", 128),
+            new FieldDef(4,"schema_page", 0)
     );
 
     public DBFile(String path) throws IOException {
@@ -176,6 +180,14 @@ public class DBFile implements Closeable {
         return 1<<m;
     }
 
+    public SchemaTable get_schema() {
+        int page_id = headers.get("schema_page").to_int();
+        if (page_id == 0) {
+            throw new DBRuntimeError("schema page not set");
+        }
+        return new SchemaTable(page_id, this);
+    }
+
     ////////////////////////////
     // db create
     ////////////////////////////
@@ -185,6 +197,18 @@ public class DBFile implements Closeable {
         int pos = db.headers.get_total_length();
         db.write(0, pos, new byte[DBFile.HEADER_SIZE - pos]);
         db.sync();
+
+        db.set_cache(new LRUCache(db, db.headers.get("cache_count").to_int()));
+
+        int page_id = db.alloc_page();
+        db.headers.set("schema_page", page_id);
+        BPlusTree.create(
+                page_id,
+                db,
+                Arrays.asList(ObjType.STRING(TABLE_NAME_LEN)),
+                //            root_page
+                Arrays.asList(ObjType.INT)
+        );
         return db;
     }
 }
