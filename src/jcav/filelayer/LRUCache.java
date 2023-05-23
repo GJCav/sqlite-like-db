@@ -2,7 +2,9 @@ package jcav.filelayer;
 
 import jcav.filelayer.exception.DBRuntimeError;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -13,18 +15,29 @@ import java.util.Map;
  */
 public class LRUCache implements Cache {
     private DBFile db;
+    private RandomAccessFile ram;
     private int max_cache_size = 100;
     private Map<Integer, Block> blocks = new HashMap<>();
     private BlockChain used_blocks = new BlockChain();
     private BlockChain free_blocks = new BlockChain();
 
+    /**
+     *
+     * @param db
+     * @param max_cache_size must not be less than 2, otherwise may cause bugs
+     */
     public LRUCache(DBFile db, int max_cache_size) {
         if (db == null) throw new IllegalArgumentException("db must not be null");
-        if (max_cache_size <= 0)
-            throw new IllegalArgumentException("max_cache_size must be positive");
+        if (max_cache_size <= 1)
+            throw new IllegalArgumentException("max_cache_size must not be less than 2");
 
         this.db = db;
         this.max_cache_size = max_cache_size;
+        try {
+            this.ram = new RandomAccessFile(db.path, "rwd");
+        } catch (Exception e) {
+            throw new DBRuntimeError("create cache error", e);
+        }
     }
 
     private void release_block(Block block) {
@@ -40,8 +53,8 @@ public class LRUCache implements Cache {
 
         long file_offset = db.get_page_offset(block.page_id);
         try {
-            db.ram.seek(file_offset);
-            db.ram.write(block.data);
+            ram.seek(file_offset);
+            ram.write(block.data);
             block.updated = false;
         } catch (IOException e) {
             throw new RuntimeException("LRU write back error", e);
@@ -76,8 +89,8 @@ public class LRUCache implements Cache {
         byte[] data = new byte[page_size];
 
         try {
-            db.ram.seek(file_offset);
-            int sz = db.ram.read(data);
+            ram.seek(file_offset);
+            int sz = ram.read(data);
             if (sz != page_size)
                 throw new RuntimeException("incomplete page read, page_id = " + page_id
                         + ", page_size = " + page_size + ", read_size = " + sz);
@@ -116,6 +129,19 @@ public class LRUCache implements Cache {
     @Override
     public void write(int page_id, int pos, byte[] data, int offset, int length) {
 //        System.out.println("[LRUCache] write page " + page_id + ", pos = " + pos + ", length = " + length);
+        // Special test for page_id out of file range
+        try {
+            long page_pos = db.get_page_offset(page_id);
+            int page_size = db.get_page_size(page_id);
+
+            if (page_pos + page_size > ram.length()) {
+                ram.seek(ram.length());
+                ram.write(new byte[(int) (page_pos + page_size - ram.length())]);
+                ram.getFD().sync();
+            }
+        } catch (IOException e) {
+            throw new RuntimeException("Unable to expand file", e);
+        }
 
         Block block = get_block(page_id);
         if (block.data.length < pos + length)
@@ -129,7 +155,13 @@ public class LRUCache implements Cache {
         for (Block block : blocks.values()) {
             if (block.updated) write_back(block);
         }
-        db.ram.getFD().sync();
+        ram.getFD().sync();
+    }
+
+    @Override
+    public void close() throws IOException {
+        sync();
+        ram.close();
     }
 
     public static final class Block {

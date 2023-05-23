@@ -2,6 +2,7 @@ package jcav.filelayer;
 
 import jcav.filelayer.exception.DBRuntimeError;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 
@@ -13,15 +14,20 @@ import java.io.RandomAccessFile;
  */
 public class NoCache implements Cache {
     private DBFile db;
+    private RandomAccessFile ram;
 
     public NoCache(DBFile db) {
         this.db = db;
+        try {
+            ram = new RandomAccessFile(db.path, "rwd");
+        } catch (FileNotFoundException e) {
+            throw new DBRuntimeError("create cache error", e);
+        }
     }
 
     @Override
     public byte[] read(int page_id, int pos, int length) {
         try {
-            RandomAccessFile ram = db.ram;
             long offset = db.get_page_offset(page_id) + pos;
             byte[] data = new byte[length];
             ram.seek(offset);
@@ -38,7 +44,6 @@ public class NoCache implements Cache {
     @Override
     public void write(int page_id, int pos, byte[] data, int offset, int length) {
         try {
-            RandomAccessFile ram = db.ram;
             long file_offset = db.get_page_offset(page_id) + pos;
             ram.seek(file_offset);
             ram.write(data, offset, length);
@@ -49,6 +54,10 @@ public class NoCache implements Cache {
 
     @Override
     public void sync() throws IOException {
-        db.ram.getFD().sync();
+        ram.getFD().sync();
+    }
+
+    public void close() throws IOException {
+        ram.close();
     }
 }

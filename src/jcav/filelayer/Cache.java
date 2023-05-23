@@ -45,4 +45,6 @@ public interface Cache {
      */
     void sync() throws IOException;
 
+    void close() throws IOException;
+
 }

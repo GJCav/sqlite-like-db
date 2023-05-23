@@ -25,7 +25,7 @@ public class DBFile implements Closeable {
     );
 
     public DBFile(String path) throws IOException {
-        this.ram = new RandomAccessFile(path, "rwd");
+        this.path = path;
         cache = new NoCache(this);
         headers = new Headers(HEADER_DEFS, 0, this);
     }
@@ -61,12 +61,10 @@ public class DBFile implements Closeable {
             // allocate a new page
             try {
                 int page_count = headers.get("page_count").to_int();
-                long pos = get_page_offset(page_count);
-                ram.seek(pos);
-                ram.write(new byte[get_page_size(page_count)]);
+                this.write(page_count, 0, new byte[get_page_size(page_count)]);
                 headers.set("page_count", page_count + 1);
                 return page_count;
-            } catch (IOException e) {
+            } catch (Exception e) {
                 throw new DBRuntimeError("Failed to allocate new page", e);
             }
         }
@@ -88,7 +86,7 @@ public class DBFile implements Closeable {
     ////////////////////////////
     // IO & cache
     ////////////////////////////
-    protected RandomAccessFile ram;
+    protected String path;
     protected Cache cache;
 
     /**
@@ -98,7 +96,7 @@ public class DBFile implements Closeable {
      */
     public void set_cache(Cache cache) throws DBRuntimeError {
         try {
-            this.cache.sync();
+            this.cache.close();
         } catch (IOException e) {
             throw new DBRuntimeError("Failed to close old cache", e);
         }
@@ -152,7 +150,7 @@ public class DBFile implements Closeable {
     @Override
     public void close() throws IOException {
         this.cache.sync();
-        this.ram.close();
+        this.cache.close();
     }
 
     /**
