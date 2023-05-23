@@ -1,10 +1,10 @@
 package jcav.test;
 
-import jcav.filelayer.DBFile;
-import jcav.filelayer.LRUCache;
+import jcav.filelayer.*;
 import jcav.filelayer.btree.*;
 import jcav.filelayer.btree.BPlusTree;
 
+import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -14,7 +14,6 @@ import java.util.List;
 public class TestDBTreeRW {
     public static void main(String[] args) {
         int count = 1000;
-        int root_page = 0;
         int max_cache = 300;
 
         long st = System.currentTimeMillis();
@@ -27,24 +26,24 @@ public class TestDBTreeRW {
             DBFile db = DBFile.create("test.db");
             db.set_cache(new LRUCache(db, max_cache));
 
-            int page_id = db.alloc_page();
             List<Integer> key_types = Arrays.asList(ObjType.INT, ObjType.INT);
             List<Integer> val_types = Arrays.asList(ObjType.STRING(32));
-            BPlusTree tree = BPlusTree.create(
-                    page_id,
+            BTreeTable tree = BTreeTable.create(
                     db,
+                    "test_table",
                     key_types,
                     val_types
             );
+
 
             for(int i = 0;i <= count;i++) {
 //                System.out.println("insert " + i);
                 Payload key = Payload.create(key_types, Arrays.asList(i, i));
                 Payload value = Payload.create(val_types, Arrays.asList("hello worl" + i));
                 tree.insert(key, value);
+                tree._check_child(tree.root_page());
             }
 
-            root_page = tree.root_page();
             db.close();
         } catch (Exception e) {
             e.printStackTrace();
@@ -59,7 +58,7 @@ public class TestDBTreeRW {
             DBFile db = new DBFile("test.db");
             db.set_cache(new LRUCache(db, max_cache));
 
-            BPlusTree tree = new BPlusTree(root_page, db);
+            BTreeTable tree = db.get_schema().get_table("test_table");
             BLeafNode lf = tree.leftmost_leaf();
 
             int i = 0;
@@ -99,6 +98,7 @@ public class TestDBTreeRW {
                     SearchResult rs = tree.search(key);
                     if (rs.found()) {
                         tree.delete(rs);
+                        tree._check_child(tree.root_page());
                     }
                 }
             }
@@ -130,7 +130,7 @@ public class TestDBTreeRW {
             DBFile db = new DBFile("test.db");
             db.set_cache(new LRUCache(db, max_cache));
 
-            BPlusTree tree = new BPlusTree(root_page, db);
+            BTreeTable tree = db.get_schema().get_table("test_table");
             BLeafNode lf = tree.leftmost_leaf();
 
             int i = 0;
@@ -156,5 +156,40 @@ public class TestDBTreeRW {
             return;
         }
         System.out.println("pass delete test, " + (System.currentTimeMillis() - st) + "ms");
+
+
+        // drop every table and check page type
+        System.out.println("drop every table and check page type");
+        st = System.currentTimeMillis();
+        try (DBFile db = new DBFile("test.db")) {
+            db.set_cache(new LRUCache(db, max_cache));
+
+            db.get_schema().get_table("test_table").drop_self();
+
+            int root = db.get_headers().get("schema_page").to_int();
+            BPlusTree tree = new BPlusTree(root, db);
+
+            Method release_self = BPlusTree.class.getDeclaredMethod("release_self");
+            release_self.setAccessible(true);
+            release_self.invoke(tree);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        System.out.println("finish drop test, " + (System.currentTimeMillis() - st) + "ms");
+
+        // test drop result, now the database should only have FreePage
+        System.out.println("test drop result");
+        try(DBFile db = new DBFile("test.db")) {
+            int page_count = db.get_headers().get("page_count").to_int();
+            for (int id = 1;id < page_count;id++) {
+                Page page = new Page(id, db);
+                int type = page.get_page_type();
+                if (type != PageType.FREE) {
+                    throw new Exception("page " + id + " type is " + type);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }

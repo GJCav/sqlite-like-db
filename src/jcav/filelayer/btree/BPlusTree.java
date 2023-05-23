@@ -1,6 +1,7 @@
 package jcav.filelayer.btree;
 
 import jcav.filelayer.DBFile;
+import jcav.filelayer.Page;
 import jcav.filelayer.PageType;
 import jcav.filelayer.exception.DBRuntimeError;
 
@@ -12,6 +13,10 @@ import java.util.Queue;
 public class BPlusTree {
     private BTreeNode root;
     private DBFile db;
+
+    ////////////////////////////////////////////////////////////////////
+    // life cycle
+    ////////////////////////////////////////////////////////////////////
 
     public BPlusTree(int root_page, DBFile db) {
         this.db = db;
@@ -39,6 +44,34 @@ public class BPlusTree {
         );
         return new BPlusTree(page_id, db);
     }
+
+    protected void release_self() {
+        recursive_drop(root);
+    }
+
+    private void recursive_drop(BTreeNode h) {
+        DBFile db = this.get_db();
+
+        if (h.get_page_type() == PageType.BTREE_INTERIOR) {
+            BInteriorNode interior = new BInteriorNode(h.get_page_id(), this.get_db());
+            int[] children = interior.get_children();
+            for(int child : children) {
+                BTreeNode child_node = new BTreeNode(child, get_db());
+                recursive_drop(child_node);
+            }
+
+            db.release_page(h.get_page_id());
+        } else if (h.get_page_type() == PageType.BTREE_LEAF) {
+            BLeafNode leaf = new BLeafNode(h.get_page_id(), this.get_db());
+            leaf.release_self();
+        } else {
+            throw new DBRuntimeError("invalid page type " + h.get_page_type() + ", fuck");
+        }
+    }
+
+    //////////////////////////////////////////////////////////////////////
+    // others
+    //////////////////////////////////////////////////////////////////////
 
     private void check_key_types(Payload key) {
         List<Integer> key_types = root.get_key_type_list();
@@ -286,6 +319,26 @@ public class BPlusTree {
 
     public void _check_total() {
         _check_total(root);
+    }
+
+    public void _check_child(int page_id) {
+        Page page = new Page(page_id, db);
+        int type = page.get_page_type();
+        if (type == PageType.BTREE_LEAF) return;
+        else if (type == PageType.BTREE_INTERIOR) {
+            BInteriorNode node = new BInteriorNode(page_id, db);
+            int[] children = node.get_children();
+            for(int child_id : children) {
+                if (child_id == 0) {
+                    throw new RuntimeException("unexpected child error, at (" + _print_keys(node) + ")");
+                }
+                _check_child(child_id);
+            }
+        } else {
+            throw new RuntimeException("Invalid page type, " +
+                    "expect BTREE_INTERIOR or BTREE_LEAF, " +
+                    "got " + type);
+        }
     }
 
 }

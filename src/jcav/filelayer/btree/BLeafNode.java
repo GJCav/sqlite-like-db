@@ -179,10 +179,9 @@ public class BLeafNode extends BTreeNode {
         storage.set_unit(unit_id, value);
     }
 
-    private void release_self() {
-        int overflow_page_id = get_overflow_page();
-        if (overflow_page_id != 0) {
-            owner.release_page(overflow_page_id);
+    public void release_self() {
+        if (storage != null) {
+            storage.release_self();
         }
         owner.release_page(page_id);
     }

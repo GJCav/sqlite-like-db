@@ -148,6 +148,15 @@ public class BInteriorNode extends BTreeNode {
         }
     }
 
+    public int[] get_children() {
+        int slot_count = get_slot_count();
+        int[] children = new int[slot_count + 1];
+        for (int i = 0; i <= slot_count; i++) {
+            children[i] = get_child(i);
+        }
+        return children;
+    }
+
     /**
      * if slot_id == slot_count, append a new slot
      * @param slot_id

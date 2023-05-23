@@ -91,6 +91,7 @@ public class Demo {
         //  - search for some data
         //  - delete some data
         //  - iterate through the table
+        //  - drop the table
         ///////////////////////////////////
         try {
             DBFile db = new DBFile("test.db");
@@ -133,6 +134,9 @@ public class Demo {
                     leaf = null;
                 }
             }
+
+            // drop the table
+            table.drop_self();
 
             db.close();
         } catch (DBRuntimeError e) {

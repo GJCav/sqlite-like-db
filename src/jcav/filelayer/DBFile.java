@@ -16,7 +16,7 @@ public class DBFile implements Closeable {
     public static final List<FieldDef> HEADER_DEFS = Arrays.asList(
             new FieldDef(32, "file_id", "SQLite-like-db"),
             new FieldDef(2, "ver", (short) 1),
-            new FieldDef(1, "page_size", (byte) 14), // 512 byte page size, for debugging
+            new FieldDef(1, "page_size", (byte) 9), // 512 byte page size, for debugging
             new FieldDef(4, "page_count", 1),
             new FieldDef(4, "freelist_head", 0),
             new FieldDef(4, "freelist_count", 0),

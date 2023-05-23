@@ -1,9 +1,6 @@
 package jcav.filelayer;
 
-import jcav.filelayer.btree.BPlusTree;
-import jcav.filelayer.btree.ObjType;
-import jcav.filelayer.btree.Payload;
-import jcav.filelayer.btree.SearchResult;
+import jcav.filelayer.btree.*;
 import jcav.filelayer.exception.DBRuntimeError;
 
 import java.util.Arrays;
@@ -47,6 +44,17 @@ public class BTreeTable extends BPlusTree {
         if (new_root != root_page) {
             update_root(new_root);
         }
+    }
+
+    public void drop_self() {
+        SchemaTable st = this.get_db().get_schema();
+        SearchResult sr = st.search(table_name);
+        if(!sr.found()) {
+            throw new DBRuntimeError("table not found in schema, this is an orphan table");
+        }
+        st.delete(sr);
+
+        release_self();
     }
 
     public static BTreeTable create(

@@ -1,9 +1,6 @@
 package jcav.filelayer.btree;
 
-import jcav.filelayer.Bytes;
-import jcav.filelayer.FieldDef;
-import jcav.filelayer.Headers;
-import jcav.filelayer.OverflowPage;
+import jcav.filelayer.*;
 import jcav.filelayer.exception.DBRuntimeError;
 
 import java.util.ArrayList;
@@ -22,6 +19,10 @@ public class CellStorage {
 
     private OverflowPage page;
     private Headers headers;
+
+    //////////////////////////////////////////////////////////////////////////
+    // life cycle
+    //////////////////////////////////////////////////////////////////////////
 
     public CellStorage(OverflowPage page) {
         if (page == null) {
@@ -71,6 +72,25 @@ public class CellStorage {
         defs.add(new FieldDef(4 * value_count, "value_types", new int[value_count]));
 
         headers = new Headers(defs, page.get_page_id(), page.get_owner());
+    }
+
+    public void release_self() {
+        List<Integer> page_ids = new ArrayList<>();
+        OverflowPage h = page;
+        while(h != null) {
+            page_ids.add(h.get_page_id());
+            int next = h.get_next();
+            if (next != 0) {
+                h = new OverflowPage(next, page.get_owner());
+            } else {
+                h = null;
+            }
+        }
+
+        DBFile db = page.get_owner();
+        for (int id : page_ids) {
+            db.release_page(id);
+        }
     }
 
     ///////////////////////////////////////////////////////////
