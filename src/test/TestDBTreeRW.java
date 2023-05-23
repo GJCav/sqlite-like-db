@@ -1,11 +1,10 @@
 package test;
 
-import db.DBFile;
-import db.LRUCache;
-import db.btree.*;
-import db.btree.BPlusTree;
+import jcav.filelayer.DBFile;
+import jcav.filelayer.LRUCache;
+import jcav.filelayer.btree.*;
+import jcav.filelayer.btree.BPlusTree;
 
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -31,7 +30,7 @@ public class TestDBTreeRW {
             int page_id = db.alloc_page();
             List<Integer> key_types = Arrays.asList(ObjType.INT, ObjType.INT);
             List<Integer> val_types = Arrays.asList(ObjType.STRING(32));
-            db.btree.BPlusTree tree = BPlusTree.create(
+            BPlusTree tree = BPlusTree.create(
                     page_id,
                     db,
                     key_types,

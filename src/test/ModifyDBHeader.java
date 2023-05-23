@@ -1,6 +1,9 @@
 package test;
 
 import db.*;
+import jcav.filelayer.DBFile;
+import jcav.filelayer.Headers;
+import jcav.filelayer.LRUCache;
 
 public class ModifyDBHeader {
     public static void main(String[] argv) {
