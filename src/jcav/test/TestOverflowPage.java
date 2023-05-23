@@ -1,4 +1,4 @@
-package test;
+package jcav.test;
 
 import jcav.filelayer.Bytes;
 import jcav.filelayer.DBFile;

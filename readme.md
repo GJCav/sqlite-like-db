@@ -1,3 +1,3 @@
 # SQLite-like-db
 
-For a quick start, see [Demo.java](./src/test/Demo.java)
+For a quick start, see [Demo.java](src/jcav/test/Demo.java)

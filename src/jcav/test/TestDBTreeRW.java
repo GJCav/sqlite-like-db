@@ -1,4 +1,4 @@
-package test;
+package jcav.test;
 
 import jcav.filelayer.DBFile;
 import jcav.filelayer.LRUCache;

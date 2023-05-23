@@ -1,7 +1,7 @@
 package jcav.filelayer;
 
-import db.exception.*;
 
+import jcav.filelayer.exception.*;
 import java.io.IOException;
 
 public interface Cache {

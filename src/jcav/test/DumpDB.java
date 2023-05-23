@@ -1,6 +1,5 @@
-package test;
+package jcav.test;
 
-import db.*;
 import jcav.filelayer.*;
 import jcav.filelayer.exception.DBRuntimeError;
 
