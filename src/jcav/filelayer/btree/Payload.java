@@ -3,10 +3,7 @@ package jcav.filelayer.btree;
 import jcav.filelayer.Bytes;
 import jcav.filelayer.exception.DBRuntimeError;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.ArrayList;
+import java.util.*;
 
 /**
  * Payload models the columns in a table. A payload is either a key or a value in b-tree.
@@ -27,6 +24,11 @@ public class Payload implements Comparable<Payload> {
     public Payload(List<Integer> types, byte[] data) {
         if (types == null) throw new NullPointerException("types must not be null");
         if (data == null) throw new NullPointerException("data must not be null");
+        if (data.length != get_size(types)) {
+            throw new DBRuntimeError("data size mismatch, expect " + get_size(types)
+                    + " bytes, got " + data.length + " bytes");
+        }
+
         this.types = new ArrayList<>(types);
         this.data = data;
     }
@@ -40,7 +42,7 @@ public class Payload implements Comparable<Payload> {
     }
 
     private int get_obj_offset(int idx) {
-        int offset = 0;
+        int offset = types.size();
         for (int i = 0; i < idx; i++) {
             offset += ObjType.get_size(types.get(i));
         }
@@ -60,7 +62,9 @@ public class Payload implements Comparable<Payload> {
             throw new DBRuntimeError("data too short");
 
         Object val = null;
-        if (type == ObjType.INT) {
+        if (data[idx] == 1) {
+            // null
+        } else if (type == ObjType.INT) {
             val = Bytes.to_int(data, offset);
         } else if (type == ObjType.LONG) {
             val = Bytes.to_long(data, offset);
@@ -90,21 +94,30 @@ public class Payload implements Comparable<Payload> {
         if (data.length < offset + size)
             throw new DBRuntimeError("data too short");
 
-        if (type == ObjType.INT) {
+        if (val.obj == null) {
+            // special case for null
+            byte[] val_bytes = new byte[ObjType.get_size(type)];
+            System.arraycopy(val_bytes, 0, data, offset, size);
+            data[idx] = 1;
+        } else if (type == ObjType.INT) {
             byte[] val_bytes = Bytes.from_int(val.as_int());
             System.arraycopy(val_bytes, 0, data, offset, size);
+            data[idx] = 0;
         } else if (type == ObjType.LONG) {
             byte[] val_bytes = Bytes.from_long(val.as_long());
             System.arraycopy(val_bytes, 0, data, offset, size);
+            data[idx] = 0;
         } else if (type == ObjType.FLOAT) {
             byte[] val_bytes = Bytes.from_float(val.as_float());
             System.arraycopy(val_bytes, 0, data, offset, size);
+            data[idx] = 0;
         } else if (ObjType.is_type_string(type)) {
             byte[] str_bytes = Bytes.from_string(val.as_string());
             System.arraycopy(str_bytes, 0, data, offset, str_bytes.length);
             if (str_bytes.length < size) {
                 Arrays.fill(data, offset + str_bytes.length, offset + size, (byte) 0);
             }
+            data[idx] = 0;
         } else {
             throw new DBRuntimeError("unknown type " + ObjType.to_string(type));
         }
@@ -128,20 +141,21 @@ public class Payload implements Comparable<Payload> {
         return compatible;
     }
 
+    public static int get_size(List<Integer> types) {
+        int sz = types.size() + ObjType.get_size(types);
+        return sz;
+    }
+
+    public static int get_size(int[] types) {
+        return types.length + ObjType.get_size(types);
+    }
+
     public boolean is_compatible(Payload o) {
         return is_compatible(types, o.types);
     }
 
     public List<Integer> get_types() {
         return Collections.unmodifiableList(types);
-    }
-
-    public int get_payload_size() {
-        int sz = 0;
-        for (int t : types) {
-            sz += ObjType.get_size(t);
-        }
-        return sz;
     }
 
     public byte[] get_bytes() {
@@ -154,28 +168,10 @@ public class Payload implements Comparable<Payload> {
         sbuf.append("(");
         for (int i = 0; i < types.size(); i++) {
             if (i > 0) sbuf.append(", ");
-            sbuf.append(get_obj(i).get_obj());
+            sbuf.append(get_obj(i));
         }
         sbuf.append(")");
         return sbuf.toString();
-    }
-
-    public static ObjValue wrap_object(int val) {
-        return new ObjValue(ObjType.INT, val);
-    }
-
-    public static ObjValue wrap_object(long val) {
-        return new ObjValue(ObjType.LONG, val);
-    }
-
-    public static ObjValue wrap_object(float val) {
-        return new ObjValue(ObjType.FLOAT, val);
-    }
-
-    public static ObjValue wrap_object(int len, String val) {
-        if (len < val.length()) throw new IllegalArgumentException("len must be greater than val.length()");
-        int type = ObjType.STRING(len);
-        return new ObjValue(type, val);
     }
 
     public static Payload create(List<Integer> types, List<Object> objs) {
@@ -183,7 +179,7 @@ public class Payload implements Comparable<Payload> {
         if (objs == null) throw new NullPointerException("objs must not be null");
         if (types.size() != objs.size()) throw new IllegalArgumentException("types.size() != objs.size()");
 
-        byte[] data = new byte[ObjType.get_size(types)];
+        byte[] data = new byte[get_size(types)];
 
         Payload payload = new Payload(types, data);
         for (int i = 0; i < objs.size(); i++) {
@@ -210,23 +206,31 @@ public class Payload implements Comparable<Payload> {
             ObjValue v1 = get_obj(i);
             ObjValue v2 = o.get_obj(i);
             if (v1.type == ObjType.INT) {
-                int i1 = v1.as_int();
-                int i2 = v2.as_int();
+                Integer i1 = v1.as_int();
+                Integer i2 = v2.as_int();
+                if (i1 == null) i1 = Integer.MIN_VALUE;
+                if (i2 == null) i2 = Integer.MIN_VALUE;
                 if (i1 < i2) return -1;
                 if (i1 > i2) return 1;
             } else if (v1.type == ObjType.LONG) {
-                long l1 = v1.as_long();
-                long l2 = v2.as_long();
+                Long l1 = v1.as_long();
+                Long l2 = v2.as_long();
+                if (l1 == null) l1 = Long.MIN_VALUE;
+                if (l2 == null) l2 = Long.MIN_VALUE;
                 if (l1 < l2) return -1;
                 if (l1 > l2) return 1;
             } else if (v1.type == ObjType.FLOAT) {
-                float f1 = v1.as_float();
-                float f2 = v2.as_float();
+                Float f1 = v1.as_float();
+                Float f2 = v2.as_float();
+                if (f1 == null) f1 = Float.MIN_VALUE;
+                if (f2 == null) f2 = Float.MIN_VALUE;
                 if (f1 < f2) return -1;
                 if (f1 > f2) return 1;
             } else if (ObjType.is_type_string(v1.type)) {
                 String s1 = v1.as_string();
                 String s2 = v2.as_string();
+                if (s1 == null) s1 = "";
+                if (s2 == null) s2 = "";
                 int cmp = s1.compareTo(s2);
                 if (cmp < 0) return -1;
                 if (cmp > 0) return 1;
@@ -246,7 +250,7 @@ public class Payload implements Comparable<Payload> {
             this.type = type;
             this.obj = obj;
 
-            if (obj.getClass() == String.class){
+            if (obj != null && obj.getClass() == String.class){
                 if (!ObjType.is_type_string(type))
                     throw new DBRuntimeError("type mismatch, obj type is " + ObjType.to_string(type)
                             + ", target type is " + ObjType.to_string(ObjType.STRING(0)));
@@ -264,44 +268,48 @@ public class Payload implements Comparable<Payload> {
             return obj;
         }
 
-        public int as_int() {
+        public Integer as_int() {
             if (type != ObjType.INT)
                 throw new DBRuntimeError("type mismatch, obj type is " + ObjType.to_string(type)
                         + ", target type is " + ObjType.to_string(ObjType.INT));
-            return (int) obj;
+            return obj == null ? null : (Integer) obj;
         }
 
-        public long as_long() {
+        public Long as_long() {
             if (type != ObjType.LONG)
                 throw new DBRuntimeError("type mismatch, obj type is " + ObjType.to_string(type)
                         + ", target type is " + ObjType.to_string(ObjType.LONG));
-            return (long) obj;
+            return obj == null ? null : (Long) obj;
         }
 
-        public float as_float() {
+        public Float as_float() {
             if (type != ObjType.FLOAT)
                 throw new DBRuntimeError("type mismatch, obj type is " + ObjType.to_string(type)
                         + ", target type is " + ObjType.to_string(ObjType.FLOAT));
-            return (float) obj;
+            return obj == null ? null : (Float) obj;
         }
 
-        public double as_double() {
+        public Double as_double() {
             if (type != ObjType.DOUBLE)
                 throw new DBRuntimeError("type mismatch, obj type is " + ObjType.to_string(type)
                         + ", target type is " + ObjType.to_string(ObjType.DOUBLE));
-            return (double) obj;
+            return obj == null ? null : (Double) obj;
         }
 
         public String as_string() {
             if (!ObjType.is_type_string(type))
                 throw new DBRuntimeError("type mismatch, obj type is " + ObjType.to_string(type)
                         + ", target type is STRING");
-            return (String) obj;
+            return obj == null ? null : (String) obj;
         }
 
         @Override
         public String toString() {
-            return obj.toString();
+            if (obj == null) return null;
+            if (ObjType.is_type_string(type)) {
+                return "\"" + obj + "\"";
+            }
+            return Objects.toString(obj);
         }
     }
 }

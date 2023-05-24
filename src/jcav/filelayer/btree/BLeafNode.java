@@ -160,7 +160,6 @@ public class BLeafNode extends BTreeNode {
                     + slot_id + ", slot_count: " + slot_count);
         }
 
-        int cell_id = get_slot(slot_id);
         LeafCell cell = get_slot_cell(slot_id);
         int unit_id = cell.get_unit_id();
         Payload value = storage.get_unit(unit_id);
@@ -173,7 +172,6 @@ public class BLeafNode extends BTreeNode {
                     + slot_id + ", slot_count: " + slot_count);
         }
 
-        int cell_id = get_slot(slot_id);
         LeafCell cell = get_slot_cell(slot_id);
         int unit_id = cell.get_unit_id();
         storage.set_unit(unit_id, value);

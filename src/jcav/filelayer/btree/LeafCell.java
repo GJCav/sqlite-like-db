@@ -31,7 +31,8 @@ public class LeafCell extends Cell {
         header_defs = HEADERS;
         this.payload_types = payload_types;
 
-        int exp_size = get_header_size() + ObjType.get_size(payload_types);
+//        int exp_size = get_header_size() + ObjType.get_size(payload_types);
+        int exp_size = get_cell_size(payload_types);
         if (data.length != exp_size)
             throw new DBRuntimeError("data size mismatch, expect " + exp_size
                     + " bytes, got " + data.length + " bytes");
@@ -44,7 +45,8 @@ public class LeafCell extends Cell {
         header_defs = HEADERS;
         this.payload_types = Arrays.stream(types).boxed().collect(Collectors.toList());
 
-        int exp_size = get_header_size() + ObjType.get_size(payload_types);
+//        int exp_size = get_header_size() + ObjType.get_size(payload_types);
+        int exp_size = get_cell_size(types);
         if (data.length != exp_size)
             throw new DBRuntimeError("data size mismatch, expect " + exp_size
                     + " bytes, got " + data.length + " bytes");
@@ -59,7 +61,7 @@ public class LeafCell extends Cell {
     public static LeafCell create(int cell_id, int[] key_types) {
         return create(
                 cell_id,
-                new byte[Headers.get_total_length(HEADERS) + ObjType.get_size(key_types)],
+                new byte[get_cell_size(key_types)],
                 key_types
         );
     }

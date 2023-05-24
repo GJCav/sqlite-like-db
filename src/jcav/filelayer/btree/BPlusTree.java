@@ -9,6 +9,7 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
+import java.util.function.Consumer;
 
 public class BPlusTree {
     private BTreeNode root;
@@ -217,6 +218,19 @@ public class BPlusTree {
         return root.get_value_type_list();
     }
 
+    public void foreach_leaf(Consumer<BLeafNode> consumer) {
+        BLeafNode leaf = leftmost_leaf();
+        while (leaf != null) {
+            consumer.accept(leaf);
+            int next = leaf.get_right_sibling();
+            if (next != 0) {
+                leaf = new BLeafNode(next, db);
+            } else {
+                leaf = null;
+            }
+        }
+    }
+
     ////////////////////////////////////////////////////////////
     // for debug
     ////////////////////////////////////////////////////////////
@@ -275,20 +289,12 @@ public class BPlusTree {
     }
 
     public void _print_leaf_nodes() {
-        BLeafNode lf = leftmost_leaf();
-        while(lf != null) {
+        foreach_leaf((lf) -> {
             System.out.println("leaf " + lf.get_page_id());
             for(int i = 0;i < lf.get_slot_count();i++) {
                 System.out.println("- " + lf.get_key(i) + " -> " + lf.get_value(i));
             }
-
-            int right_id = lf.get_right_sibling();
-            if (right_id != 0) {
-                lf = new BLeafNode(right_id, db);
-            } else {
-                lf = null;
-            }
-        }
+        });
     }
 
     public int _check_total(BTreeNode h) {

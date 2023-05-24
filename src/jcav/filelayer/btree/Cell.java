@@ -1,6 +1,7 @@
 package jcav.filelayer.btree;
 
 import jcav.filelayer.FieldDef;
+import jcav.filelayer.Headers;
 import jcav.filelayer.exception.DBRuntimeError;
 
 import java.util.ArrayList;
@@ -41,7 +42,10 @@ public abstract class Cell {
     public byte[] get_data() { return data; }
 
     public static int get_cell_size(int[] key_types) {
-        int key_size = ObjType.get_size(key_types);
-        return 5 + key_size;
+        return 5 + Payload.get_size(key_types);
+    }
+
+    public static int get_cell_size(List<Integer> key_types) {
+        return 5 + Payload.get_size(key_types);
     }
 }

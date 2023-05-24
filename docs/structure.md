@@ -200,17 +200,19 @@ interior node body 由多个 cell 组成，cell 可以是 interior cell，结构
 | ------------------ | ---------- | ------------------- |
 | 1                  | type       | cell type           |
 | 4                  | child_page | child page number   |
+| key_types.length   | is_null    | the value is null   |
 | size_of(key_types) | data       | binary data for key |
 
 
 
 也可以是 free cell，结构为：
 
-| len                | name | description       |
-| ------------------ | ---- | ----------------- |
-| 1                  | type | cell type         |
-| 4                  | next | next free cell id |
-| size_of(key_types) |      | not used          |
+| len                | name    | description       |
+| ------------------ | ------- | ----------------- |
+| 1                  | type    | cell type         |
+| 4                  | next    | next free cell id |
+| key_types.length   | is_null | not used          |
+| size_of(key_types) |         | not used          |
 
 
 
@@ -222,6 +224,7 @@ leaf node body 由多个 cell 组成，cell 可以是 leaf cell 类型，结构�
 | ------------------ | ------- | ---------------------------------- |
 | 1                  | type    | cell type                          |
 | 4                  | unit_id | unit id for value in overflow page |
+| key_types.lenght   | is_null | the value is null                  |
 | size_of(key_types) | data    | binary data for key                |
 
 也可以是 free cell，不再赘述。

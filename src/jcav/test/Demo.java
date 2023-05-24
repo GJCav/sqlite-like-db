@@ -119,21 +119,13 @@ public class Demo {
             table.delete(sr);
 
             // iterate through the table
-            BLeafNode leaf = table.leftmost_leaf();
-            while (leaf != null) {
+            table.foreach_leaf((leaf) -> {
                 for (int i = 0;i < leaf.get_slot_count();i++) {
                     Payload key = leaf.get_key(i);
                     Payload value = leaf.get_value(i);
                     System.out.println("key: " + key + ", value: " + value);
                 }
-
-                int next = leaf.get_right_sibling();
-                if (next != 0) {
-                    leaf = new BLeafNode(next, leaf.get_owner());
-                } else {
-                    leaf = null;
-                }
-            }
+            });
 
             // drop the table
             table.drop_self();

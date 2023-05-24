@@ -40,7 +40,7 @@ public class CellStorage {
             throw new NullPointerException("page is null");
         }
 
-        int unit_size = ObjType.get_size(value_types);
+        int unit_size = Payload.get_size(value_types);
         unit_size = Math.max(unit_size, 4);            // at least 4 bytes to store next_free unit id
 
         List<FieldDef> defs = new ArrayList<>(OverflowPage.HEADER_DEFS);

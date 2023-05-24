@@ -25,7 +25,8 @@ public class InteriorCell extends Cell {
         header_defs = HEADER_DEFS;
         this.payload_types = payload_types;
 
-        int exp_size = get_header_size() + ObjType.get_size(payload_types);
+//        int exp_size = get_header_size() + ObjType.get_size(payload_types);
+        int exp_size = get_cell_size(payload_types);
         if (data.length != exp_size)
             throw new DBRuntimeError("data size mismatch, expect " + exp_size
                     + " bytes, got " + data.length + " bytes");
@@ -38,7 +39,8 @@ public class InteriorCell extends Cell {
         header_defs = HEADER_DEFS;
         this.payload_types = Arrays.stream(payload_types).boxed().collect(Collectors.toList());
 
-        int exp_size = get_header_size() + ObjType.get_size(payload_types);
+//        int exp_size = get_header_size() + ObjType.get_size(payload_types);
+        int exp_size = get_cell_size(payload_types);
         if (data.length != exp_size)
             throw new DBRuntimeError("data size mismatch, expect " + exp_size
                     + " bytes, got " + data.length + " bytes");
@@ -53,7 +55,7 @@ public class InteriorCell extends Cell {
     public static InteriorCell create(int cell_id, int[] payload_types) {
         return create(
                 cell_id,
-                new byte[Headers.get_total_length(HEADER_DEFS) + ObjType.get_size(payload_types)],
+                new byte[get_cell_size(payload_types)],
                 payload_types
         );
     }
