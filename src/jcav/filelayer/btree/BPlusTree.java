@@ -209,6 +209,14 @@ public class BPlusTree {
         return db;
     }
 
+    public List<Integer> get_key_types() {
+        return root.get_key_type_list();
+    }
+
+    public List<Integer> get_value_types() {
+        return root.get_value_type_list();
+    }
+
     ////////////////////////////////////////////////////////////
     // for debug
     ////////////////////////////////////////////////////////////
@@ -340,5 +348,4 @@ public class BPlusTree {
                     "got " + type);
         }
     }
-
 }
