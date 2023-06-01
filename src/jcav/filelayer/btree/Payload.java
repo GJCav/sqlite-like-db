@@ -188,6 +188,10 @@ public class Payload implements Comparable<Payload> {
         return payload;
     }
 
+    public static Creator creator() {
+        return new Creator();
+    }
+
     @Override
     public int compareTo(Payload o) {
         if (o == null) throw new NullPointerException("o must not be null");
@@ -310,6 +314,45 @@ public class Payload implements Comparable<Payload> {
                 return "\"" + obj + "\"";
             }
             return Objects.toString(obj);
+        }
+    }
+
+    public static final class Creator {
+        List<Integer> val_types = new ArrayList<>();
+        List<Object> val_objs = new ArrayList<>();
+
+        public Creator val(Integer val) {
+            val_types.add(ObjType.INT);
+            val_objs.add(val);
+            return this;
+        }
+
+        public Creator val(Long val) {
+            val_types.add(ObjType.LONG);
+            val_objs.add(val);
+            return this;
+        }
+
+        public Creator val(Float val) {
+            val_types.add(ObjType.FLOAT);
+            val_objs.add(val);
+            return this;
+        }
+
+        public Creator val(Double val) {
+            val_types.add(ObjType.DOUBLE);
+            val_objs.add(val);
+            return this;
+        }
+
+        public Creator val(int len, String val) {
+            val_types.add(ObjType.STRING(len));
+            val_objs.add(val);
+            return this;
+        }
+
+        public Payload create() {
+            return Payload.create(val_types, val_objs);
         }
     }
 }

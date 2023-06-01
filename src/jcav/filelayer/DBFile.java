@@ -6,7 +6,8 @@ import jcav.filelayer.exception.DBRuntimeError;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.io.RandomAccessFile;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
 
@@ -16,7 +17,7 @@ public class DBFile implements Closeable {
     public static final List<FieldDef> HEADER_DEFS = Arrays.asList(
             new FieldDef(32, "file_id", "SQLite-like-db"),
             new FieldDef(2, "ver", (short) 1),
-            new FieldDef(1, "page_size", (byte) 14), // 512 byte page size, for debugging
+            new FieldDef(1, "page_size", (byte) 9), // 512 byte page size, for debugging
             new FieldDef(4, "page_count", 1),
             new FieldDef(4, "freelist_head", 0),
             new FieldDef(4, "freelist_count", 0),
@@ -28,6 +29,15 @@ public class DBFile implements Closeable {
         this.path = path;
         cache = new NoCache(this);
         headers = new Headers(HEADER_DEFS, 0, this);
+
+        recover();
+    }
+
+    private void recover() {
+        String wal_path = path + ".wal";
+        if (!Files.exists(Paths.get(wal_path))) return;
+        Transaction tx = new Transaction(this);
+        tx.recover();
     }
 
     ////////////////////////////
@@ -59,8 +69,16 @@ public class DBFile implements Closeable {
             return free_page;
         } else {
             // allocate a new page
+
             try {
                 int page_count = headers.get("page_count").to_int();
+                if (transaction != null) {
+                    // Special case: allocate a new page in a transaction
+                    // this is required because the following this.write will make the transaction
+                    // read the page at page_count, which is not allocated yet and will cause an
+                    // incomplete page error.
+                    transaction.notify_alloc_page(page_count);
+                }
                 this.write(page_count, 0, new byte[get_page_size(page_count)]);
                 headers.set("page_count", page_count + 1);
                 return page_count;
@@ -84,23 +102,37 @@ public class DBFile implements Closeable {
     }
 
     ////////////////////////////
-    // IO & cache
+    // IO & cache & transaction
     ////////////////////////////
     protected String path;
     protected Cache cache;
+    protected boolean _readonly = false;
+    protected Transaction transaction = null;
 
     /**
      * set the cache, close the old cache.
      * @param cache
      * @throws DBRuntimeError
      */
-    public void set_cache(Cache cache) throws DBRuntimeError {
+    public void set_cache(Cache cache) {
         try {
             this.cache.close();
         } catch (IOException e) {
             throw new DBRuntimeError("Failed to close old cache", e);
         }
         this.cache = cache;
+    }
+
+    public void use_LRUCache() {
+        set_cache(new LRUCache(this, headers.get("cache_count").to_int()));
+    }
+
+    public Transaction transaction() {
+        if (transaction != null) {
+            throw new DBRuntimeError("Transaction already exists");
+        }
+        transaction = Transaction.create(this);
+        return transaction;
     }
 
     /**
@@ -116,7 +148,10 @@ public class DBFile implements Closeable {
      * @return
      */
     public byte[] read(int page_id, int pos, int length) {
-        return this.cache.read(page_id, pos, length);
+        if (transaction == null)
+            return this.cache.read(page_id, pos, length);
+        else
+            return transaction.read(page_id, pos, length);
     }
 
     /**
@@ -129,7 +164,11 @@ public class DBFile implements Closeable {
      * @param length
      */
     public void write(int page_id, int pos, byte[] data, int offset, int length) {
-        this.cache.write(page_id, pos, data, offset, length);
+        if (_readonly) throw new DBRuntimeError("DBFile is readonly");
+        if (transaction == null)
+            this.cache.write(page_id, pos, data, offset, length);
+        else
+            transaction.write(page_id, pos, data, offset, length);
     }
 
     /**
@@ -140,7 +179,12 @@ public class DBFile implements Closeable {
      * @param data
      */
     public void write(int page_id, int pos, byte[] data) {
-        this.cache.write(page_id, pos, data);
+        if (_readonly) throw new DBRuntimeError("DBFile is readonly");
+        if (transaction == null) {
+            this.cache.write(page_id, pos, data, 0, data.length);
+        } else {
+            transaction.write(page_id, pos, data, 0, data.length);
+        }
     }
 
     /**

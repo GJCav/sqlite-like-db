@@ -1,5 +1,7 @@
 package jcav.filelayer.btree;
 
+import jcav.filelayer.exception.DBRuntimeError;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -17,5 +19,21 @@ public class SearchResult {
 
     public boolean found() {
         return idx >= 0;
+    }
+    public BLeafNode get_leaf() {
+        BTreeNode node = path.get(path.size() - 1);
+        BLeafNode leaf = new BLeafNode(node.get_page_id(), node.get_owner());
+        return leaf;
+    }
+    public Payload get_value() {
+        if (!found()) throw new DBRuntimeError("not found");
+        int idx = idxs.get(idxs.size() - 1);
+        return get_leaf().get_value(idx);
+    }
+
+    public void set_value(Payload value) {
+        if (!found()) throw new DBRuntimeError("not found");
+        int idx = idxs.get(idxs.size() - 1);
+        get_leaf().set_value(idx, value);
     }
 }

@@ -10,9 +10,9 @@
 
 1. DBFile.transaction
    * 这个 DBFile 禁止 write 操作
-   * 新建并返回一个特殊的 TDBFile，这个类继承自 DBFile 但行为有所不同
+   * ~~新建并返回一个特殊的 TDBFile，这个类继承自 DBFile 但行为有所不同~~  实现在老 DBFile 中
      * 创建 WAL 缓存、WAL 文件并标记为 "rollback"
-     * 创建 WAL table：(page num, wal page num)
+     * ~~创建 WAL table：(page num, wal page num)~~ 用 wal_db 的 record 表实现
      * WAL 缓存是 WAL 文件的缓存
        * wal page num --> wal page data 
      * TDBFile.read 重定向：
@@ -21,10 +21,10 @@
      * TDBFile.write 重定向：
        * 若 WAL table 含有 page num，用 new data 覆盖 wal page num 中的数据
        * 若 WAL table 不含 page num，从 DBFile.cache 复制 page num data 到 wal cache 并覆盖
-     * 要求上层用户在 transaction 内部使用 TDBFile 来进行各种 search、update、insert 等操作
+     * ~~要求上层用户在 transaction 内部使用 TDBFile 来进行各种 search、update、insert 等操作~~
 2. WAL 缓存有容量限制，把超出容量的 page 写入 WAL 文件
    * WAL 文件写入记录的逻辑结构为 (page num, old data, new data)
-   * old data 从 DBFile 中 read 读取出来，new data 是 WAL cache
+   * old data 从 DBFile 中 read 读取出来，new data 从 WAL cache 读取
 3. TDBFile.commit
    * 把 WAL 缓存全部写入 WAL 文件，把 WAL 文件标记为 "committing"
    * 根据 WAL 文件中的记录，把 new data 全部写入 DBFile 文件
@@ -34,7 +34,7 @@
 
 rollback：
 
-* 直接抛弃 TDBFile ，不调用 commit 即可
+* 直接抛弃 WAL，不调用 commit 即可
 
 
 
