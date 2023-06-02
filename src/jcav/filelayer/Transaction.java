@@ -16,11 +16,13 @@ public class Transaction implements Closeable {
     public static final int W_ROLLBACK = 0;
     public static final int W_COMMITTING = 1;
     public static final int W_COMMITTED = 2;
+    public static final int W_CLOSED = -1;
     public static final FieldDef STATE_DEF = new FieldDef(4, "w_state", W_ROLLBACK);
 
     protected DBFile db;
     protected DBFile wal_db;
     private boolean is_committed = false;
+    private boolean is_closed = false;
     private boolean commit_on_close = false;
     protected BTreeTable records = null;
 
@@ -215,14 +217,25 @@ public class Transaction implements Closeable {
         commit_on_close = true;
     }
 
+    public int get_status() {
+        if (is_closed) return W_CLOSED;
+        if (wal_db == null) return W_CLOSED;
+        int status = wal_db.headers.get("w_state").to_int();
+        return status;
+    }
+
     @Override
     public void close() throws IOException {
         if (wal_db == null) return; // already closed
-        if (!is_committed && commit_on_close) {
-            commit();
-        }
-        if (!is_committed) {
-            rollback();
+        try {
+            if (!is_committed && commit_on_close) {
+                commit();
+            }
+            if (!is_committed) {
+                rollback();
+            }
+        } finally {
+            is_closed = true;
         }
     }
 }
