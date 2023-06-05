@@ -111,6 +111,10 @@ public class Payload implements Comparable<Payload> {
             byte[] val_bytes = Bytes.from_float(val.as_float());
             System.arraycopy(val_bytes, 0, data, offset, size);
             data[idx] = 0;
+        } else if (type == ObjType.DOUBLE){
+            byte[] val_bytes = Bytes.from_double(val.as_double());
+            System.arraycopy(val_bytes, 0, data, offset, size);
+            data[idx] = 0;
         } else if (ObjType.is_type_string(type)) {
             byte[] str_bytes = Bytes.from_string(val.as_string());
             System.arraycopy(str_bytes, 0, data, offset, str_bytes.length);
